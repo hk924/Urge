@@ -32,7 +32,7 @@ export default function Auth({ authEmail, setAuthEmail, authName, setAuthName, a
             <div style={{ fontSize: 12, fontFamily: mn, color: TL, marginBottom: 6, marginTop: 4, letterSpacing: "0.1em", textTransform: "uppercase" }}>Epost</div>
             <input type="email" placeholder="din@epost.no" value={authEmail} onChange={e => setAuthEmail(e.target.value)} style={ip} />
             {authMsg && <div style={{ fontSize: 13, color: SM, marginBottom: 10 }}>{authMsg}</div>}
-            <button onClick={sendOTP} style={{ ...bp, marginTop: 16, opacity: authEmail && authName ? 1 : .4 }}>Send kode</button>
+            <button onClick={() => { if (authEmail && authName) sendOTP() }} disabled={!authEmail || !authName} style={{ ...bp, marginTop: 16, opacity: authEmail && authName ? 1 : .4 }}>Send kode</button>
           </div>
         </div>
       ) : authStep === "otp" ? (
@@ -55,7 +55,7 @@ export default function Auth({ authEmail, setAuthEmail, authName, setAuthName, a
             onChange={e => setOtpCode(e.target.value.replace(/\D/g, ""))}
             style={{ ...ip, textAlign: "center", fontSize: 28, fontFamily: mn, letterSpacing: "0.3em", fontWeight: 700, maxWidth: 240, margin: "0 auto", marginBottom: 10 }} />
           {authMsg && <div style={{ fontSize: 13, color: SM, marginBottom: 10 }}>{authMsg}</div>}
-          <button onClick={verifyOTP} style={{ ...bp, maxWidth: 320, opacity: otpCode.length === 6 ? 1 : .4 }}>Bekreft</button>
+          <button onClick={() => { if (otpCode.length === 6) verifyOTP() }} disabled={otpCode.length !== 6} style={{ ...bp, maxWidth: 320, opacity: otpCode.length === 6 ? 1 : .4 }}>Bekreft</button>
           <button onClick={() => { setAuthStep("email"); setOtpCode(""); setAuthMsg("") }} style={{ ...bgg, marginTop: 10, maxWidth: 320 }}>Tilbake</button>
           <button onClick={sendOTP} style={{ background: "none", border: "none", color: TL, fontSize: 13, fontFamily: mn, cursor: "pointer", marginTop: 16 }}>Send kode på nytt</button>
         </div>

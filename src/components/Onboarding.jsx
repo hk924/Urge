@@ -1,11 +1,13 @@
-import { P, PL, TM, TL, TX, BD, BG, BG2, mn, sf, bp, bgg, ip, ba } from '../constants/theme'
+import { P, PL, TM, TL, TX, SM, BD, BG, BG2, mn, sf, bp, bgg, ip, ba } from '../constants/theme'
 import { DEF_GOALS, WHY_OPTIONS } from '../constants/data'
+import ErrToast from './ErrToast'
 
-export default function Onboarding({ obStep, setObStep, selG, setSelG, selW, setSelW, cGoal, setCGoal, saveProf, cfg }) {
+export default function Onboarding({ obStep, setObStep, selG, setSelG, selW, setSelW, cGoal, setCGoal, saveProf, cfg, err, setErr }) {
   const tog = (a, s, id) => { s(a.includes(id) ? a.filter(x => x !== id) : [...a, id]) }
 
   return (
     <div style={{ ...ba, padding: 24, paddingBottom: 32, background: `radial-gradient(ellipse at 50% 0%, rgba(124,92,252,0.1) 0%, transparent 50%), ${BG}` }} className="fade-in">
+      <ErrToast err={err} setErr={setErr} />
       {obStep === "goals" ? (
         <>
           <div style={{ marginTop: 48, marginBottom: 8 }}>
@@ -27,7 +29,7 @@ export default function Onboarding({ obStep, setObStep, selG, setSelG, selW, set
           </div>
           <div style={{ fontSize: 12, fontFamily: mn, color: TL, marginBottom: 6, marginTop: 20 }}>Eller skriv ditt eget</div>
           <input type="text" placeholder="F.eks. veie under 80 kg" value={cGoal} onChange={e => setCGoal(e.target.value)} style={ip} />
-          <button onClick={() => { if (selG.length || cGoal) setObStep("whys") }} style={{ ...bp, marginTop: 16, opacity: selG.length || cGoal ? 1 : .4 }}>Neste</button>
+          <button onClick={() => { if (selG.length || cGoal) setObStep("whys") }} disabled={!selG.length && !cGoal} style={{ ...bp, marginTop: 16, opacity: selG.length || cGoal ? 1 : .4 }}>Neste</button>
         </>
       ) : obStep === "whys" ? (
         <>
@@ -49,9 +51,10 @@ export default function Onboarding({ obStep, setObStep, selG, setSelG, selW, set
             )}
           </div>
           <button onClick={async () => {
+            if (!selW.length) return
             const g = { goals: cGoal ? [...selG, "custom:" + cGoal] : selG, whys: selW, customGoal: cGoal }
             await saveProf(g, cfg)
-          }} style={{ ...bp, marginTop: 28, opacity: selW.length ? 1 : .4 }}>Start reisen</button>
+          }} disabled={!selW.length} style={{ ...bp, marginTop: 28, opacity: selW.length ? 1 : .4 }}>Start reisen</button>
           <button onClick={() => setObStep("goals")} style={{ ...bgg, marginTop: 10 }}>Tilbake</button>
         </>
       ) : null}

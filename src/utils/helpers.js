@@ -1,7 +1,8 @@
 import { DEF_GOALS, WHY_OPTIONS, GQ, FQ } from '../constants/data'
 
 export function td() {
-  return new Date().toISOString().split("T")[0]
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function fd(iso) {
@@ -17,7 +18,7 @@ export function fds(iso) {
 export function ago(n) {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  return d.toISOString().split("T")[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function agl(n) {

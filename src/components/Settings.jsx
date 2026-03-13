@@ -104,7 +104,7 @@ export default function Settings({
         <>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Spare-milestones</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {eM.sort((a, b) => a.a - b.a).map((m, i) =>
+            {[...eM].sort((a, b) => a.a - b.a).map((m, i) =>
               <div key={i} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 12,
                 border: `1px solid ${BD}`, backgroundColor: BG2

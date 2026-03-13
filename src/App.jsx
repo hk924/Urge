@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabase'
 import { DEF_TRIGGERS, DEF_MILESTONES, DEF_COST, ST } from './constants/data'
-import { ba, mn, TL, BG } from './constants/theme'
+import { ba, mn, TL } from './constants/theme'
 import { td, gmq } from './utils/helpers'
 
 import Auth from './components/Auth'
@@ -127,8 +127,13 @@ export default function App() {
     const uid = user.id
     const pl = { id: uid, name: user.user_metadata?.name || authName || "", email: user.email, goals: g || goals, config: c || cfg }
     const { error } = await supabase.from("profiles").upsert(pl)
-    if (error) console.error("Save prof:", error)
+    if (error) {
+      console.error("Save prof:", error)
+      sErr("Kunne ikke lagre profil. Prøv igjen.")
+      return false
+    }
     sP({ goals: pl.goals, config: pl.config })
+    return true
   }
 
   async function addResist(tr) {
@@ -146,19 +151,24 @@ export default function App() {
   }
 
   async function addCheckin(d, mood, mid) {
-    await supabase.from("checkins").delete().eq("user_id", user.id).eq("date", d)
-    const { data } = await supabase.from("checkins").insert({ user_id: user.id, mood, mood_id: mid, date: d }).select().single()
+    const { error: delErr } = await supabase.from("checkins").delete().eq("user_id", user.id).eq("date", d)
+    if (delErr) { console.error("Checkin del err:", delErr); sErr("Kunne ikke lagre sjekk."); return }
+    const { data, error } = await supabase.from("checkins").insert({ user_id: user.id, mood, mood_id: mid, date: d }).select().single()
+    if (error) { console.error("Checkin err:", error); sErr("Kunne ikke lagre sjekk."); return }
     if (data) sChk(p => [data, ...p.filter(c => c.date !== d)])
   }
 
   async function addWeight(kg, fat, mus) {
-    await supabase.from("weights").delete().eq("user_id", user.id).eq("date", td())
-    const { data } = await supabase.from("weights").insert({ user_id: user.id, kg, fat, muscle: mus, date: td() }).select().single()
+    const { error: delErr } = await supabase.from("weights").delete().eq("user_id", user.id).eq("date", td())
+    if (delErr) { console.error("Weight del err:", delErr); sErr("Kunne ikke lagre vekt."); return }
+    const { data, error } = await supabase.from("weights").insert({ user_id: user.id, kg, fat, muscle: mus, date: td() }).select().single()
+    if (error) { console.error("Weight err:", error); sErr("Kunne ikke lagre vekt."); return }
     if (data) sWgt(p => [data, ...p.filter(w => w.date !== td())])
   }
 
   async function addWorkout(ty, dur) {
-    const { data } = await supabase.from("workouts").insert({ user_id: user.id, type: ty, duration: dur, date: td() }).select().single()
+    const { data, error } = await supabase.from("workouts").insert({ user_id: user.id, type: ty, duration: dur, date: td() }).select().single()
+    if (error) { console.error("Workout err:", error); sErr("Kunne ikke lagre trening."); return }
     if (data) sWko(p => [data, ...p])
   }
 
@@ -168,14 +178,14 @@ export default function App() {
   const nm = milestones.find(m => m.a > ms) || milestones[milestones.length - 1]
   const mp = nm ? Math.min((ms / nm.a) * 100, 100) : 100
 
-  const curS = useCallback(() => {
+  const curS = useMemo(() => {
     if (!sml.length && !res.length) return 0
     const sd = new Set(sml.map(s => s.date))
     let sk = 0
     const d = new Date()
     if (sd.has(td())) return 0
     for (let i = 0; i < 365; i++) {
-      const ds = d.toISOString().split("T")[0]
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       if (sd.has(ds)) break
       const hr = res.some(r => r.date === ds)
       const hc = chk.some(c => c.date === ds)
@@ -184,22 +194,39 @@ export default function App() {
       d.setDate(d.getDate() - 1)
     }
     return sk
-  }, [sml, res, chk])()
+  }, [sml, res, chk])
 
-  const besS = useCallback(() => {
+  const besS = useMemo(() => {
     if (!sml.length) return curS
     const ad = [...res.map(r => r.date), ...chk.map(c => c.date), ...sml.map(s => s.date)].sort()
     if (!ad.length) return 0
     const sd = new Set(sml.map(s => s.date))
     let b = 0, c = 0
     const d = new Date(ad[0]), e = new Date()
-    while (d <= e) { if (sd.has(d.toISOString().split("T")[0])) { b = Math.max(b, c); c = 0 } else c++; d.setDate(d.getDate() + 1) }
+    while (d <= e) {
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      if (sd.has(ds)) { b = Math.max(b, c); c = 0 } else c++
+      d.setDate(d.getDate() + 1)
+    }
     return Math.max(b, c)
-  }, [sml, res, chk, curS])()
+  }, [sml, res, chk, curS])
 
   const tc = triggers.map(t => ({ ...t, rc: res.filter(r => r.trigger_type === t.id).length, sc: sml.filter(s => s.trigger_type === t.id).length }))
 
   useEffect(() => { if (goals) sHq(gmq(goals.goals || [], goals.whys || [], "")) }, [goals])
+
+  function openSettings() {
+    sET([...triggers]); sEM([...milestones]); sECost(String(smellCost))
+    sEG([...(goals?.goals || [])]); sEW([...(goals?.whys || [])]); sEC(goals?.customGoal || "")
+    sSetTab("goals")
+    sSS(true)
+  }
+
+  function closeSettings() {
+    sSS(false)
+    sET([]); sEM([]); sEG([]); sEW([]); sEC(""); sECost("")
+    sNT(""); sNMA(""); sNML("")
+  }
 
   // Loading
   if (loading) return (
@@ -228,15 +255,12 @@ export default function App() {
       selW={selW} setSelW={sSW}
       cGoal={cGoal} setCGoal={sCG}
       saveProf={saveProf} cfg={cfg}
+      err={err} setErr={sErr}
     />
   )
 
   // Settings
   if (showSet) {
-    if (!eT.length && triggers.length) {
-      sET([...triggers]); sEM([...milestones]); sECost(String(smellCost))
-      sEG([...(goals?.goals || [])]); sEW([...(goals?.whys || [])]); sEC(goals?.customGoal || "")
-    }
     return (
       <Settings
         goals={goals} cfg={cfg} triggers={triggers} milestones={milestones} smellCost={smellCost} user={user}
@@ -245,7 +269,7 @@ export default function App() {
         eM={eM} setEM={sEM} nMA={nMA} setNMA={sNMA} nML={nML} setNML={sNML}
         eCost={eCost} setECost={sECost}
         setTab={setTab} setTab2={sSetTab} saveProf={saveProf}
-        onClose={() => { sSS(false); sET([]) }}
+        onClose={closeSettings}
         err={err} setErr={sErr}
       />
     )
@@ -273,11 +297,6 @@ export default function App() {
     />
   )
 
-  // Smell detail view
-  if (sel) return (
-    <Log sml={sml} sel={sel} setSel={sSel} sc={sc} setScreen={sSc} />
-  )
-
   // Main screens
   if (sc === "home") return (
     <Home
@@ -289,11 +308,7 @@ export default function App() {
       setScreen={sSc} sc={sc}
       onResist={() => sSrf(true)}
       onSmell={() => { sStl(ST[Math.floor(Math.random() * ST.length)]); sSsr(true) }}
-      onOpenSettings={() => {
-        sET([...triggers]); sEM([...milestones]); sECost(String(smellCost))
-        sEG([...(goals?.goals || [])]); sEW([...(goals?.whys || [])]); sEC(goals?.customGoal || "")
-        sSS(true)
-      }}
+      onOpenSettings={openSettings}
     />
   )
 

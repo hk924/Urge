@@ -2,7 +2,7 @@ export const CONF = 0.3
 
 export const ST = [
   "Det er helt greit.",
-  "Skjer de beste.",
+  "Skjer den beste.",
   "Ikke la dette stoppe deg.",
   "Én dårlig beslutning er ikke en dårlig uke.",
   "Du er fortsatt på rett vei.",

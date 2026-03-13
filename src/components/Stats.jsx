@@ -53,7 +53,7 @@ export default function Stats({ curS, besS, tR, tS, ms, smellCost, milestones, t
 
         <div style={{ ...glass, marginTop: 12 }}>
           <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase", marginBottom: 16 }}>Triggere</div>
-          {tc.sort((a, b) => b.rc - a.rc).map((t, i) =>
+          {[...tc].sort((a, b) => b.rc - a.rc).map((t, i) =>
             <div key={t.id} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
               borderBottom: i < tc.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none"
