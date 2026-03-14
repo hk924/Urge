@@ -199,7 +199,12 @@ export default function App() {
     sWthS(true); sWthE("")
     try {
       const result = await syncWithings()
-      if (result.synced > 0) await loadData(user.id)
+      if (result.synced > 0) {
+        await loadData(user.id)
+        sWthE(`${result.synced} målinger synkronisert!`)
+      } else {
+        sWthE(result.message || "Ingen nye målinger funnet")
+      }
     } catch (e) {
       console.error("Withings sync:", e)
       sWthE(e.message || "Synkronisering feilet.")

@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
         },
         body: new URLSearchParams({
           action: "getmeas",
-          meastype: `${MEASURE_TYPES.WEIGHT},${MEASURE_TYPES.FAT_PERCENT},${MEASURE_TYPES.MUSCLE_MASS}`,
-          category: "1", // real measurements only
+          meastypes: `${MEASURE_TYPES.WEIGHT},${MEASURE_TYPES.FAT_PERCENT},${MEASURE_TYPES.MUSCLE_MASS}`,
+          category: "1",
           startdate: startdate.toString(),
           enddate: enddate.toString(),
         }),
@@ -127,10 +127,17 @@ Deno.serve(async (req) => {
 
       const measData = await measRes.json()
 
-      if (measData.status !== 0 || !measData.body?.measuregrps) {
+      if (measData.status !== 0) {
         console.error("Measure fetch failed:", measData)
-        return new Response(JSON.stringify({ error: "Failed to fetch measurements" }), {
+        return new Response(JSON.stringify({ error: `Withings API error: status ${measData.status}`, debug: measData }), {
           status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+
+      const groups = measData.body?.measuregrps || []
+      if (groups.length === 0) {
+        return new Response(JSON.stringify({ ok: true, synced: 0, message: "Ingen nye målinger funnet" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         })
       }
