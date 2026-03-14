@@ -203,7 +203,7 @@ export default function App() {
         await loadData(user.id)
         sWthE(`${result.synced} målinger synkronisert!`)
       } else {
-        sWthE(result.message || "Ingen nye målinger funnet")
+        sWthE(JSON.stringify(result))
       }
     } catch (e) {
       console.error("Withings sync:", e)
