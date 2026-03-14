@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { P, PL, TM, TL, TX, BD, BG, BG2, BG3, mn, sf, bp, ip, glass, ba } from '../constants/theme'
+import { P, PL, AC, TM, TL, TX, BD, BG, BG2, BG3, mn, sf, bp, ip, glass, ba } from '../constants/theme'
 import { WTS } from '../constants/data'
 import { td, fd, ago, agl } from '../utils/helpers'
 import Chart from './Chart'
@@ -8,7 +8,8 @@ import TabBar from './TabBar'
 export default function Body({
   wgt, wko, bt, setBt, wf, setWf, wef, setWef,
   wi, setWi, woi, setWoi,
-  addWeight, addWorkout, delWeight, delWorkout, sc, setScreen
+  addWeight, addWorkout, delWeight, delWorkout, sc, setScreen,
+  wthC, wthS, wthE, connectWithings, syncWithings, disconnectWithings
 }) {
   const [wd2, setWd2] = useState(td())
   const [wdp, setWdp] = useState(false)
@@ -58,6 +59,31 @@ export default function Body({
         </div>
 
         {bt === "vekt" && (
+          <>
+          <div style={{ ...glass, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase", marginBottom: 4 }}>Withings</div>
+              <div style={{ fontSize: 13, fontFamily: mn, color: wthC ? AC : TM }}>{wthC ? "Tilkoblet" : "Ikke tilkoblet"}</div>
+              {wthE && <div style={{ fontSize: 12, fontFamily: mn, color: "#dc2626", marginTop: 4 }}>{wthE}</div>}
+            </div>
+            {wthC ? (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={syncWithings} disabled={wthS} style={{
+                  background: "none", border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px",
+                  fontSize: 11, fontFamily: mn, color: wthS ? TL : P, cursor: wthS ? "default" : "pointer", opacity: wthS ? 0.6 : 1
+                }}>{wthS ? "Synkr..." : "Synkroniser"}</button>
+                <button onClick={disconnectWithings} style={{
+                  background: "none", border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px",
+                  fontSize: 11, fontFamily: mn, color: TL, cursor: "pointer"
+                }}>Koble fra</button>
+              </div>
+            ) : (
+              <button onClick={connectWithings} style={{
+                background: "none", border: `1px solid ${P}`, borderRadius: 8, padding: "6px 12px",
+                fontSize: 11, fontFamily: mn, color: P, cursor: "pointer"
+              }}>Koble til</button>
+            )}
+          </div>
           <div style={glass}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase" }}>Vekt</div>
@@ -99,6 +125,7 @@ export default function Body({
                   }}>
                     <div>
                       <span style={{ fontSize: 15, fontWeight: 500 }}>{w.kg} kg</span>
+                      {w.source === "withings" && <span style={{ fontSize: 9, fontFamily: mn, color: AC, marginLeft: 6, verticalAlign: "middle" }}>W</span>}
                       <span style={{ fontSize: 12, fontFamily: mn, color: TL, marginLeft: 10 }}>{w.date === td() ? "I dag" : fd(w.date)}</span>
                     </div>
                     <button onClick={async () => {
@@ -115,6 +142,7 @@ export default function Body({
               </div>
             )}
           </div>
+          </>
         )}
 
         {bt === "comp" && (

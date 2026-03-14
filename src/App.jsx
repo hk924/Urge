@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabase'
+import { getWithingsStatus, getWithingsAuthUrl, syncWithings, disconnectWithings } from './lib/withings'
 import { DEF_TRIGGERS, DEF_MILESTONES, DEF_COST, ST } from './constants/data'
 import { ba, mn, TL } from './constants/theme'
 import { td, gmq } from './utils/helpers'
@@ -65,6 +66,9 @@ export default function App() {
   const [nMA, sNMA] = useState("")
   const [nML, sNML] = useState("")
   const [eCost, sECost] = useState("")
+  const [wthC, sWthC] = useState(false)
+  const [wthS, sWthS] = useState(false)
+  const [wthE, sWthE] = useState("")
 
   const goals = profile?.goals || null
   const cfg = profile?.config || null
@@ -85,6 +89,15 @@ export default function App() {
       } catch (e) { console.error("Init:", e); if (mounted) sL(false) }
     }
     init()
+    // Handle Withings OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search)
+    const wthParam = urlParams.get("withings")
+    if (wthParam) {
+      window.history.replaceState(null, "", window.location.pathname)
+      if (wthParam === "connected") { sWthC(true); sWthE("") }
+      else if (wthParam === "error") { sWthE("Tilkobling til Withings feilet. Prøv igjen.") }
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (ev, session) => {
       if (!mounted) return
       if ((ev === "SIGNED_IN" || ev === "TOKEN_REFRESHED") && session?.user) {
@@ -109,6 +122,7 @@ export default function App() {
       if (pf.data) sP({ goals: pf.data.goals, config: pf.data.config }); else sP(null)
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
     } catch (e) { console.error("Load:", e) }
+    try { const c = await getWithingsStatus(); sWthC(c) } catch (e) { /* ignore */ }
     sL(false)
   }
 
@@ -172,6 +186,33 @@ export default function App() {
     const { data, error } = await supabase.from("workouts").insert({ user_id: user.id, type: ty, duration: dur, date: date || td() }).select().single()
     if (error) { console.error("Workout err:", error); sErr("Kunne ikke lagre trening."); return }
     if (data) sWko(p => [data, ...p])
+  }
+
+  async function connectWithings() {
+    try {
+      const url = await getWithingsAuthUrl()
+      window.location.href = url
+    } catch (e) { console.error("Withings auth:", e); sWthE("Kunne ikke starte tilkobling.") }
+  }
+
+  async function syncWithingsData() {
+    sWthS(true); sWthE("")
+    try {
+      const result = await syncWithings()
+      if (result.synced > 0) await loadData(user.id)
+    } catch (e) {
+      console.error("Withings sync:", e)
+      sWthE(e.message || "Synkronisering feilet.")
+      if (e.message?.includes("reconnect")) sWthC(false)
+    }
+    sWthS(false)
+  }
+
+  async function disconnectWithingsFlow() {
+    try {
+      await disconnectWithings()
+      sWthC(false); sWthE("")
+    } catch (e) { console.error("Withings disconnect:", e); sWthE("Kunne ikke koble fra.") }
   }
 
   async function delResist(id) {
@@ -297,6 +338,7 @@ export default function App() {
         setTab={setTab} setTab2={sSetTab} saveProf={saveProf}
         onClose={closeSettings}
         err={err} setErr={sErr}
+        wthC={wthC} wthE={wthE} connectWithings={connectWithings} disconnectWithings={disconnectWithingsFlow}
       />
     )
   }
@@ -353,6 +395,8 @@ export default function App() {
       wi={wi} setWi={sWi} woi={woi} setWoi={sWoi}
       addWeight={addWeight} addWorkout={addWorkout} delWeight={delWeight} delWorkout={delWorkout}
       sc={sc} setScreen={sSc}
+      wthC={wthC} wthS={wthS} wthE={wthE}
+      connectWithings={connectWithings} syncWithings={syncWithingsData} disconnectWithings={disconnectWithingsFlow}
     />
   )
 

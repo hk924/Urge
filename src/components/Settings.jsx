@@ -11,7 +11,8 @@ export default function Settings({
   eM, setEM, nMA, setNMA, nML, setNML,
   eCost, setECost,
   setTab, setTab2, saveProf, onClose,
-  err, setErr
+  err, setErr,
+  wthC, wthE, connectWithings, disconnectWithings
 }) {
   const tog2 = (a, s, id) => { s(a.includes(id) ? a.filter(x => x !== id) : [...a, id]) }
 
@@ -143,6 +144,27 @@ export default function Settings({
             const ok = await saveProf(goals, c)
             if (ok) onClose()
           }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
+          <div style={{ fontSize: 16, fontWeight: 600, marginTop: 32, marginBottom: 16 }}>Tilkoblinger</div>
+          <div style={glass}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>Withings</div>
+                <div style={{ fontSize: 12, fontFamily: mn, color: wthC ? AC : TL, marginTop: 2 }}>{wthC ? "Tilkoblet" : "Ikke tilkoblet"}</div>
+                {wthE && <div style={{ fontSize: 12, fontFamily: mn, color: "#dc2626", marginTop: 2 }}>{wthE}</div>}
+              </div>
+              {wthC ? (
+                <button onClick={disconnectWithings} style={{
+                  background: "none", border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 12px",
+                  fontSize: 11, fontFamily: mn, color: SM, cursor: "pointer"
+                }}>Koble fra</button>
+              ) : (
+                <button onClick={connectWithings} style={{
+                  background: "none", border: `1px solid ${P}`, borderRadius: 8, padding: "6px 12px",
+                  fontSize: 11, fontFamily: mn, color: P, cursor: "pointer"
+                }}>Koble til</button>
+              )}
+            </div>
+          </div>
           <div style={{ fontSize: 16, fontWeight: 600, marginTop: 32, marginBottom: 16 }}>Profil</div>
           <div style={glass}>
             <div style={{ fontSize: 14, color: TM }}>{user.user_metadata?.name || user.email}</div>
