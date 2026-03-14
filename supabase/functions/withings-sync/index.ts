@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       const measData = await measRes.json()
 
       if (measData.status !== 0) {
-        return new Response(JSON.stringify({ error: `Withings feil ${measData.status}: ${JSON.stringify(measData).slice(0, 200)}` }), {
+        return new Response(JSON.stringify({ error: `Withings API-feil (${measData.status})` }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         })
@@ -135,10 +135,7 @@ Deno.serve(async (req) => {
 
       const groups = measData.body?.measuregrps || []
       if (groups.length === 0) {
-        return new Response(JSON.stringify({
-          ok: true, synced: 0,
-          message: `Tom respons: ${JSON.stringify(measData).slice(0, 300)}`,
-        }), {
+        return new Response(JSON.stringify({ ok: true, synced: 0, message: "Ingen nye målinger" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         })
       }
@@ -174,7 +171,7 @@ Deno.serve(async (req) => {
           date: dateStr,
           source: "withings",
           external_id: externalId,
-        }, { onConflict: "external_id" })
+        }, { onConflict: "user_id,date" })
 
         if (upsertErr) {
           console.error("Upsert error:", upsertErr)
