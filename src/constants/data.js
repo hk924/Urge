@@ -74,3 +74,10 @@ export const MO = [
 ]
 
 export const WTS = ["Gåtur", "Styrke", "Løping", "Sykling", "Annet"]
+
+export const STREAK_LEVELS = [
+  { level: 1, min: 0, label: "Nivå 1" },
+  { level: 2, min: 7, label: "Nivå 2" },
+  { level: 3, min: 30, label: "Nivå 3" },
+  { level: 4, min: 100, label: "Nivå 4" },
+]

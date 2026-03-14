@@ -213,6 +213,25 @@ export default function App() {
 
   const tc = triggers.map(t => ({ ...t, rc: res.filter(r => r.trigger_type === t.id).length, sc: sml.filter(s => s.trigger_type === t.id).length }))
 
+  const weekData = useMemo(() => {
+    const today = new Date()
+    const mon = new Date(today)
+    mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
+    mon.setHours(0, 0, 0, 0)
+    const days = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"]
+    return days.map((day, i) => {
+      const d = new Date(mon)
+      d.setDate(d.getDate() + i)
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const isToday = ds === td()
+      const isFuture = d > today
+      const hasResist = res.some(r => r.date === ds)
+      const hasCheckin = chk.some(c => c.date === ds)
+      const hasSmell = sml.some(s => s.date === ds)
+      return { day, date: ds, hasResist, hasCheckin, hasSmell, isToday, isFuture }
+    })
+  }, [res, sml, chk])
+
   useEffect(() => { if (goals) sHq(gmq(goals.goals || [], goals.whys || [], "")) }, [goals])
 
   function openSettings() {
@@ -313,7 +332,7 @@ export default function App() {
   )
 
   if (sc === "stats") return (
-    <Stats curS={curS} besS={besS} tR={tR} tS={tS} ms={ms} smellCost={smellCost} milestones={milestones} tc={tc} sc={sc} setScreen={sSc} />
+    <Stats curS={curS} besS={besS} tR={tR} tS={tS} ms={ms} smellCost={smellCost} milestones={milestones} tc={tc} weekData={weekData} sc={sc} setScreen={sSc} />
   )
 
   if (sc === "log") return (
