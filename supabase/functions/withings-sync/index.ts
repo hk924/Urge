@@ -142,7 +142,6 @@ Deno.serve(async (req) => {
         })
       }
 
-      const groups = measData.body.measuregrps
       let synced = 0
 
       for (const grp of groups) {

@@ -38,8 +38,13 @@ export async function syncWithings() {
     headers,
     body: JSON.stringify({ action: 'sync' }),
   })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Sync failed')
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    throw new Error(`Server error (${res.status})`)
+  }
+  if (!res.ok) throw new Error(data.error || `Sync feilet (${res.status})`)
   return data
 }
 
