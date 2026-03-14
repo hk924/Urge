@@ -22,7 +22,6 @@ export default function App() {
   const [otpCode, sOTP] = useState("")
   const [authMsg, sAM] = useState("")
   const [loading, sL] = useState(true)
-  const [dataReady, sDR] = useState(false)
   const [profile, sP] = useState(null)
   const [sc, sSc] = useState("home")
   const [err, sErr] = useState("")
@@ -80,7 +79,7 @@ export default function App() {
         const { data: { session } } = await supabase.auth.getSession()
         if (window.location.hash?.includes("access_token")) window.history.replaceState(null, "", window.location.pathname)
         if (!mounted) return
-        if (session?.user) { sU(session.user); await loadData(session.user.id) }
+        if (session?.user) { await loadData(session.user.id); sU(session.user) }
         else sL(false)
       } catch (e) { console.error("Init:", e); if (mounted) sL(false) }
     }
@@ -88,9 +87,9 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (ev, session) => {
       if (!mounted) return
       if ((ev === "SIGNED_IN" || ev === "TOKEN_REFRESHED") && session?.user) {
-        sU(session.user); await loadData(session.user.id); sAS("email"); sOTP("")
+        await loadData(session.user.id); sU(session.user); sAS("email"); sOTP("")
       }
-      if (ev === "SIGNED_OUT") { sU(null); sP(null); sDR(false); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
+      if (ev === "SIGNED_OUT") { sU(null); sP(null); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
     })
     return () => { mounted = false; clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
@@ -109,7 +108,6 @@ export default function App() {
       ])
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
     } catch (e) { console.error("Load:", e) }
-    sDR(true)
     sL(false)
   }
 
@@ -266,13 +264,6 @@ export default function App() {
       authMsg={authMsg} setAuthMsg={sAM}
       sendOTP={sendOTP} verifyOTP={verifyOTP}
     />
-  )
-
-  // Still loading profile data
-  if (user && !dataReady) return (
-    <div style={{ ...ba, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-      <div style={{ fontSize: 14, fontFamily: mn, color: TL, animation: "pulse 1.5s infinite" }}>Laster...</div>
-    </div>
   )
 
   // Onboarding
