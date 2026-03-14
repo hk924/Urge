@@ -69,6 +69,7 @@ export default function App() {
   const [wthC, sWthC] = useState(false)
   const [wthS, sWthS] = useState(false)
   const [wthE, sWthE] = useState("")
+  const [wthLoaded, sWthLoaded] = useState(false)
 
   const goals = profile?.goals || null
   const cfg = profile?.config || null
@@ -123,8 +124,6 @@ export default function App() {
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
     } catch (e) { console.error("Load:", e) }
     sL(false)
-    // Check Withings status in background (don't block app loading)
-    getWithingsStatus().then(c => sWthC(c)).catch(() => {})
   }
 
   async function sendOTP() {
@@ -250,6 +249,13 @@ export default function App() {
     sWko(p => p.filter(w => w.id !== id))
     return true
   }
+
+  useEffect(() => {
+    if ((sc === "body" || showSet) && user && !wthLoaded) {
+      sWthLoaded(true)
+      getWithingsStatus().then(c => sWthC(c)).catch(() => {})
+    }
+  }, [sc, showSet, user, wthLoaded])
 
   const tR = res.length
   const tS = sml.length
