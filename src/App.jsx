@@ -22,6 +22,7 @@ export default function App() {
   const [otpCode, sOTP] = useState("")
   const [authMsg, sAM] = useState("")
   const [loading, sL] = useState(true)
+  const [dataReady, sDR] = useState(false)
   const [profile, sP] = useState(null)
   const [sc, sSc] = useState("home")
   const [err, sErr] = useState("")
@@ -89,7 +90,7 @@ export default function App() {
       if ((ev === "SIGNED_IN" || ev === "TOKEN_REFRESHED") && session?.user) {
         sU(session.user); await loadData(session.user.id); sAS("email"); sOTP("")
       }
-      if (ev === "SIGNED_OUT") { sU(null); sP(null); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
+      if (ev === "SIGNED_OUT") { sU(null); sP(null); sDR(false); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
     })
     return () => { mounted = false; clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
@@ -99,6 +100,7 @@ export default function App() {
       const { data: prof, error: pe } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle()
       if (pe) console.error("Profile err:", pe)
       if (prof) sP({ goals: prof.goals, config: prof.config }); else sP(null)
+      sDR(true)
       const [r, s, c, w, wo] = await Promise.all([
         supabase.from("resists").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
         supabase.from("smells").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
@@ -264,6 +266,13 @@ export default function App() {
       authMsg={authMsg} setAuthMsg={sAM}
       sendOTP={sendOTP} verifyOTP={verifyOTP}
     />
+  )
+
+  // Still loading profile data
+  if (user && !dataReady) return (
+    <div style={{ ...ba, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+      <div style={{ fontSize: 14, fontFamily: mn, color: TL, animation: "pulse 1.5s infinite" }}>Laster...</div>
+    </div>
   )
 
   // Onboarding
