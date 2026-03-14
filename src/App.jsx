@@ -122,8 +122,9 @@ export default function App() {
       if (pf.data) sP({ goals: pf.data.goals, config: pf.data.config }); else sP(null)
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
     } catch (e) { console.error("Load:", e) }
-    try { const c = await getWithingsStatus(); sWthC(c) } catch (e) { /* ignore */ }
     sL(false)
+    // Check Withings status in background (don't block app loading)
+    getWithingsStatus().then(c => sWthC(c)).catch(() => {})
   }
 
   async function sendOTP() {
