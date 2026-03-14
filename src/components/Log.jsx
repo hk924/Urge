@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { P, PL, SM, SML, TM, TL, TX, BD, mn, sf, glass, ba } from '../constants/theme'
 import { fd } from '../utils/helpers'
 import TriggerIcon from './TriggerIcon'
 import TabBar from './TabBar'
 
-export default function Log({ sml, res, triggers, sel, setSel, sc, setScreen }) {
+export default function Log({ sml, res, triggers, sel, setSel, delResist, delSmell, sc, setScreen }) {
+  const [dId, setDId] = useState(null)
+
   const all = [
     ...res.map(r => ({ ...r, _type: 'resist' })),
     ...sml.map(s => ({ ...s, _type: 'smell' }))
@@ -26,7 +29,7 @@ export default function Log({ sml, res, triggers, sel, setSel, sc, setScreen }) 
       <div style={{ ...ba, padding: 24, paddingBottom: 32 }} className="fade-in">
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 32, marginTop: 16 }}>
           <div style={{ fontSize: 22, fontWeight: 600 }}>Smell-memo</div>
-          <button onClick={() => setSel(null)} style={{ background: "none", border: "none", fontSize: 14, fontFamily: mn, color: TM, cursor: "pointer" }}>Lukk</button>
+          <button onClick={() => { setSel(null); setDId(null) }} style={{ background: "none", border: "none", fontSize: 14, fontFamily: mn, color: TM, cursor: "pointer" }}>Lukk</button>
         </div>
         <div style={{ fontSize: 13, fontFamily: mn, color: TL, marginBottom: 24 }}>{fd(z.date)}</div>
         {z.trigger_text && <div style={{ marginBottom: 24 }}>
@@ -49,6 +52,18 @@ export default function Log({ sml, res, triggers, sel, setSel, sc, setScreen }) 
           <div style={{ height: 1, backgroundColor: BD, margin: "32px 0" }} />
           <div style={{ fontSize: 15, fontStyle: "italic", color: TM, lineHeight: 1.6 }}>Var det verdt det? Husk denne følelsen neste gang.</div>
         </>}
+        <div style={{ height: 1, backgroundColor: BD, margin: "32px 0" }} />
+        <button onClick={async () => {
+          if (dId === z.id) {
+            const ok = await delSmell(z.id)
+            if (ok) { setSel(null); setDId(null) }
+          } else setDId(z.id)
+        }} style={{
+          width: "100%", padding: "14px 24px", borderRadius: 14, border: "none",
+          background: dId === z.id ? "#dc2626" : "rgba(220,38,38,0.1)",
+          color: dId === z.id ? "#fff" : "#dc2626",
+          fontSize: 14, fontFamily: sf, fontWeight: 500, cursor: "pointer"
+        }}>{dId === z.id ? "Bekreft sletting" : "Slett"}</button>
       </div>
     )
   }
@@ -60,7 +75,7 @@ export default function Log({ sml, res, triggers, sel, setSel, sc, setScreen }) 
       <div style={{ ...ba, padding: 24, paddingBottom: 32 }} className="fade-in">
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 32, marginTop: 16 }}>
           <div style={{ fontSize: 22, fontWeight: 600 }}>Motstått</div>
-          <button onClick={() => setSel(null)} style={{ background: "none", border: "none", fontSize: 14, fontFamily: mn, color: TM, cursor: "pointer" }}>Lukk</button>
+          <button onClick={() => { setSel(null); setDId(null) }} style={{ background: "none", border: "none", fontSize: 14, fontFamily: mn, color: TM, cursor: "pointer" }}>Lukk</button>
         </div>
         <div style={{ fontSize: 13, fontFamily: mn, color: TL, marginBottom: 24 }}>{fd(z.date)}</div>
         <div style={{ marginBottom: 24 }}>
@@ -74,6 +89,18 @@ export default function Log({ sml, res, triggers, sel, setSel, sc, setScreen }) 
           <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase", marginBottom: 8 }}>Situasjon</div>
           <div style={{ fontSize: 17, lineHeight: 1.5, fontWeight: 300 }}>{z.note}</div>
         </div>}
+        <div style={{ height: 1, backgroundColor: BD, margin: "32px 0" }} />
+        <button onClick={async () => {
+          if (dId === z.id) {
+            const ok = await delResist(z.id)
+            if (ok) { setSel(null); setDId(null) }
+          } else setDId(z.id)
+        }} style={{
+          width: "100%", padding: "14px 24px", borderRadius: 14, border: "none",
+          background: dId === z.id ? "#dc2626" : "rgba(220,38,38,0.1)",
+          color: dId === z.id ? "#fff" : "#dc2626",
+          fontSize: 14, fontFamily: sf, fontWeight: 500, cursor: "pointer"
+        }}>{dId === z.id ? "Bekreft sletting" : "Slett"}</button>
       </div>
     )
   }

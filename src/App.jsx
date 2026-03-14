@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import { DEF_TRIGGERS, DEF_MILESTONES, DEF_COST, ST } from './constants/data'
 import { ba, mn, TL } from './constants/theme'
 import { td, gmq } from './utils/helpers'
+import { calcCurrentStreak, calcBestStreak } from './utils/streak'
 
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
@@ -143,8 +144,8 @@ export default function App() {
     return true
   }
 
-  async function addSmell(m) {
-    const { data, error } = await supabase.from("smells").insert({ user_id: user.id, trigger_text: m.trigger, feeling: m.feeling, what: m.what, cost: m.cost ? parseFloat(m.cost) : 0, date: td() }).select().single()
+  async function addSmell(m, date) {
+    const { data, error } = await supabase.from("smells").insert({ user_id: user.id, trigger_text: m.trigger, feeling: m.feeling, what: m.what, cost: m.cost ? parseFloat(m.cost) : 0, date: date || td() }).select().single()
     if (error) { console.error("Smell err:", error); sErr("Kunne ikke lagre."); return false }
     if (data) sSml(p => [data, ...p])
     return true
@@ -158,18 +159,54 @@ export default function App() {
     if (data) sChk(p => [data, ...p.filter(c => c.date !== d)])
   }
 
-  async function addWeight(kg, fat, mus) {
-    const { error: delErr } = await supabase.from("weights").delete().eq("user_id", user.id).eq("date", td())
+  async function addWeight(kg, fat, mus, date) {
+    const d = date || td()
+    const { error: delErr } = await supabase.from("weights").delete().eq("user_id", user.id).eq("date", d)
     if (delErr) { console.error("Weight del err:", delErr); sErr("Kunne ikke lagre vekt."); return }
-    const { data, error } = await supabase.from("weights").insert({ user_id: user.id, kg, fat, muscle: mus, date: td() }).select().single()
+    const { data, error } = await supabase.from("weights").insert({ user_id: user.id, kg, fat, muscle: mus, date: d }).select().single()
     if (error) { console.error("Weight err:", error); sErr("Kunne ikke lagre vekt."); return }
-    if (data) sWgt(p => [data, ...p.filter(w => w.date !== td())])
+    if (data) sWgt(p => [data, ...p.filter(w => w.date !== d)])
   }
 
-  async function addWorkout(ty, dur) {
-    const { data, error } = await supabase.from("workouts").insert({ user_id: user.id, type: ty, duration: dur, date: td() }).select().single()
+  async function addWorkout(ty, dur, date) {
+    const { data, error } = await supabase.from("workouts").insert({ user_id: user.id, type: ty, duration: dur, date: date || td() }).select().single()
     if (error) { console.error("Workout err:", error); sErr("Kunne ikke lagre trening."); return }
     if (data) sWko(p => [data, ...p])
+  }
+
+  async function delResist(id) {
+    const { error } = await supabase.from("resists").delete().eq("id", id)
+    if (error) { console.error("Del resist err:", error); sErr("Kunne ikke slette."); return false }
+    sRes(p => p.filter(r => r.id !== id))
+    return true
+  }
+
+  async function delSmell(id) {
+    const { error } = await supabase.from("smells").delete().eq("id", id)
+    if (error) { console.error("Del smell err:", error); sErr("Kunne ikke slette."); return false }
+    sSml(p => p.filter(s => s.id !== id))
+    return true
+  }
+
+  async function delCheckin(id) {
+    const { error } = await supabase.from("checkins").delete().eq("id", id)
+    if (error) { console.error("Del checkin err:", error); sErr("Kunne ikke slette."); return false }
+    sChk(p => p.filter(c => c.id !== id))
+    return true
+  }
+
+  async function delWeight(id) {
+    const { error } = await supabase.from("weights").delete().eq("id", id)
+    if (error) { console.error("Del weight err:", error); sErr("Kunne ikke slette."); return false }
+    sWgt(p => p.filter(w => w.id !== id))
+    return true
+  }
+
+  async function delWorkout(id) {
+    const { error } = await supabase.from("workouts").delete().eq("id", id)
+    if (error) { console.error("Del workout err:", error); sErr("Kunne ikke slette."); return false }
+    sWko(p => p.filter(w => w.id !== id))
+    return true
   }
 
   const tR = res.length
@@ -178,38 +215,8 @@ export default function App() {
   const nm = milestones.find(m => m.a > ms) || milestones[milestones.length - 1]
   const mp = nm ? Math.min((ms / nm.a) * 100, 100) : 100
 
-  const curS = useMemo(() => {
-    if (!sml.length && !res.length) return 0
-    const sd = new Set(sml.map(s => s.date))
-    let sk = 0
-    const d = new Date()
-    if (sd.has(td())) return 0
-    for (let i = 0; i < 365; i++) {
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      if (sd.has(ds)) break
-      const hr = res.some(r => r.date === ds)
-      const hc = chk.some(c => c.date === ds)
-      if (i === 0 || hr || hc) sk++
-      else { if (!res.some(r => r.date <= ds) && !chk.some(c => c.date <= ds)) break; sk++ }
-      d.setDate(d.getDate() - 1)
-    }
-    return sk
-  }, [sml, res, chk])
-
-  const besS = useMemo(() => {
-    if (!sml.length) return curS
-    const ad = [...res.map(r => r.date), ...chk.map(c => c.date), ...sml.map(s => s.date)].sort()
-    if (!ad.length) return 0
-    const sd = new Set(sml.map(s => s.date))
-    let b = 0, c = 0
-    const d = new Date(ad[0]), e = new Date()
-    while (d <= e) {
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      if (sd.has(ds)) { b = Math.max(b, c); c = 0 } else c++
-      d.setDate(d.getDate() + 1)
-    }
-    return Math.max(b, c)
-  }, [sml, res, chk, curS])
+  const curS = useMemo(() => calcCurrentStreak(sml, res, chk), [sml, res, chk])
+  const besS = useMemo(() => calcBestStreak(sml, res, chk, curS), [sml, res, chk, curS])
 
   const tc = triggers.map(t => ({ ...t, rc: res.filter(r => r.trigger_type === t.id).length, sc: sml.filter(s => s.trigger_type === t.id).length }))
 
@@ -323,7 +330,7 @@ export default function App() {
       ms={ms} tR={tR} tS={tS} nm={nm} mp={mp} chk={chk}
       hq={hq} setHq={sHq} cd={cd} setCd={sCd}
       sdp={sdp} setSdp={sSdp}
-      addCheckin={addCheckin} err={err} setErr={sErr}
+      addCheckin={addCheckin} delCheckin={delCheckin} err={err} setErr={sErr}
       setScreen={sSc} sc={sc}
       onResist={() => sSrf(true)}
       onSmell={() => { sStl(ST[Math.floor(Math.random() * ST.length)]); sSsr(true) }}
@@ -336,7 +343,7 @@ export default function App() {
   )
 
   if (sc === "log") return (
-    <Log sml={sml} res={res} triggers={triggers} sel={sel} setSel={sSel} sc={sc} setScreen={sSc} />
+    <Log sml={sml} res={res} triggers={triggers} sel={sel} setSel={sSel} delResist={delResist} delSmell={delSmell} sc={sc} setScreen={sSc} />
   )
 
   if (sc === "body") return (
@@ -344,7 +351,7 @@ export default function App() {
       wgt={wgt} wko={wko} bt={bt} setBt={sBt}
       wf={wf} setWf={sWf} wef={wef} setWef={sWef}
       wi={wi} setWi={sWi} woi={woi} setWoi={sWoi}
-      addWeight={addWeight} addWorkout={addWorkout}
+      addWeight={addWeight} addWorkout={addWorkout} delWeight={delWeight} delWorkout={delWorkout}
       sc={sc} setScreen={sSc}
     />
   )

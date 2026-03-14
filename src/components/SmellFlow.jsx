@@ -1,6 +1,11 @@
-import { P, TM, TL, SM, SML, mn, sf, bp, bgg, ip, ba, BG } from '../constants/theme'
+import { useState } from 'react'
+import { P, PL, TM, TL, SM, SML, mn, sf, bp, bgg, ip, ba, BG, TX, BD } from '../constants/theme'
+import { td, fd, ago, agl } from '../utils/helpers'
 
 export default function SmellFlow({ ssr, setSsr, ssf, setSsf, stl, sm, setSm, tR, ms, addSmell }) {
+  const [sd, setSd] = useState(td())
+  const [sdp, setSdp] = useState(false)
+
   if (ssr && !ssf) return (
     <div style={{
       ...ba, display: "flex", flexDirection: "column", alignItems: "center",
@@ -22,7 +27,7 @@ export default function SmellFlow({ ssr, setSsr, ssf, setSsf, stl, sm, setSm, tR
       </div>
       <div style={{ fontSize: 15, maxWidth: 300, marginBottom: 48, color: "rgba(255,255,255,0.7)" }}>Vil du skrive et kort memo?</div>
       <button onClick={() => setSsf(true)} style={{ ...bp, marginBottom: 12, maxWidth: 300 }}>Ja, skriv memo</button>
-      <button onClick={async () => { const ok = await addSmell({ trigger: "", feeling: "", what: "", cost: 0 }); if (ok) setSsr(false) }} style={{ ...bgg, maxWidth: 300 }}>Hopp over</button>
+      <button onClick={async () => { const ok = await addSmell({ trigger: "", feeling: "", what: "", cost: 0 }, sd); if (ok) setSsr(false) }} style={{ ...bgg, maxWidth: 300 }}>Hopp over</button>
     </div>
   )
 
@@ -40,13 +45,31 @@ export default function SmellFlow({ ssr, setSsr, ssf, setSsf, stl, sm, setSm, tR
       <textarea style={{ ...ip, minHeight: 60, resize: "vertical" }} placeholder="F.eks. Kvikk Lunsj og Cola..." value={sm.what} onChange={e => setSm({ ...sm, what: e.target.value })} />
       <div style={{ fontSize: 12, fontFamily: mn, color: TL, marginBottom: 6, marginTop: 8 }}>Hva kostet det? (kr)</div>
       <input type="number" style={ip} placeholder="F.eks. 65" value={sm.cost} onChange={e => setSm({ ...sm, cost: e.target.value })} />
+
+      <div style={{ fontSize: 12, fontFamily: mn, color: TL, marginBottom: 6, marginTop: 8 }}>Dato</div>
+      <button onClick={() => setSdp(!sdp)} style={{
+        ...ip, textAlign: "left", cursor: "pointer", marginBottom: sdp ? 0 : 10,
+        color: sd === td() ? TM : TX
+      }}>{sd === td() ? "I dag" : fd(sd)}</button>
+      {sdp && <div style={{ marginBottom: 10, border: `1px solid ${BD}`, borderRadius: 12, overflow: "hidden" }}>
+        {[0, 1, 2, 3, 4, 5, 6].map(n =>
+          <button key={n} onClick={() => { setSd(ago(n)); setSdp(false) }} style={{
+            display: "block", width: "100%", padding: "12px 16px", textAlign: "left",
+            background: sd === ago(n) ? PL : "none", border: "none",
+            borderBottom: n < 6 ? `1px solid rgba(255,255,255,0.04)` : "none",
+            fontSize: 15, fontFamily: sf, color: TX, cursor: "pointer"
+          }}>{agl(n)}</button>
+        )}
+      </div>}
+
       <button onClick={async () => {
-        const ok = await addSmell(sm)
+        const ok = await addSmell(sm, sd)
         if (!ok) return
         setSm({ trigger: "", feeling: "", what: "", cost: "" })
+        setSd(td())
         setSsf(false)
         setSsr(false)
-      }} style={{ ...bp, marginTop: 20 }}>Lagre memo</button>
+      }} style={{ ...bp, marginTop: 10 }}>Lagre memo</button>
     </div>
   )
 

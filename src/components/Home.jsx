@@ -8,7 +8,7 @@ import ErrToast from './ErrToast'
 export default function Home({
   user, goals, curS, besS, ms, tR, tS, nm, mp, chk,
   hq, setHq, cd, setCd, sdp, setSdp,
-  addCheckin, err, setErr, setScreen,
+  addCheckin, delCheckin, err, setErr, setScreen,
   onResist, onSmell, onOpenSettings, sc
 }) {
   const rc = chk.slice(0, 5)
@@ -92,7 +92,10 @@ export default function Home({
           {chk.find(c => c.date === cd) ? (
             <div style={{ textAlign: "center", padding: "8px 0" }}>
               <div style={{ fontSize: 15, color: P, fontWeight: 500 }}>{chk.find(c => c.date === cd).mood}</div>
-              <div style={{ fontSize: 13, color: TL, marginTop: 4, fontFamily: mn }}>{cd === td() ? "Sees i morgen." : "Logget " + fd(cd)}</div>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <span style={{ fontSize: 13, color: TL, fontFamily: mn }}>{cd === td() ? "Sees i morgen." : "Logget " + fd(cd)}</span>
+                <button onClick={() => delCheckin(chk.find(c => c.date === cd).id)} style={{ background: "none", border: "none", fontSize: 12, fontFamily: mn, color: TM, cursor: "pointer", textDecoration: "underline" }}>Angre</button>
+              </div>
             </div>
           ) : (
             <>
