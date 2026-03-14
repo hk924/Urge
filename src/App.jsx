@@ -136,8 +136,8 @@ export default function App() {
     return true
   }
 
-  async function addResist(tr) {
-    const { data, error } = await supabase.from("resists").insert({ user_id: user.id, trigger_type: tr, date: td() }).select().single()
+  async function addResist(tr, note, date) {
+    const { data, error } = await supabase.from("resists").insert({ user_id: user.id, trigger_type: tr, note: note || null, date: date || td() }).select().single()
     if (error) { console.error("Resist err:", error); sErr("Kunne ikke lagre. Prøv igjen."); return false }
     if (data) sRes(p => [data, ...p])
     return true
@@ -336,7 +336,7 @@ export default function App() {
   )
 
   if (sc === "log") return (
-    <Log sml={sml} sel={sel} setSel={sSel} sc={sc} setScreen={sSc} />
+    <Log sml={sml} res={res} triggers={triggers} sel={sel} setSel={sSel} sc={sc} setScreen={sSc} />
   )
 
   if (sc === "body") return (

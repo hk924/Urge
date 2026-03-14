@@ -22,7 +22,7 @@ export default function SmellFlow({ ssr, setSsr, ssf, setSsf, stl, sm, setSm, tR
       </div>
       <div style={{ fontSize: 15, maxWidth: 300, marginBottom: 48, color: "rgba(255,255,255,0.7)" }}>Vil du skrive et kort memo?</div>
       <button onClick={() => setSsf(true)} style={{ ...bp, marginBottom: 12, maxWidth: 300 }}>Ja, skriv memo</button>
-      <button onClick={async () => { await addSmell({ trigger: "", feeling: "", what: "", cost: 0 }); setSsr(false) }} style={{ ...bgg, maxWidth: 300 }}>Hopp over</button>
+      <button onClick={async () => { const ok = await addSmell({ trigger: "", feeling: "", what: "", cost: 0 }); if (ok) setSsr(false) }} style={{ ...bgg, maxWidth: 300 }}>Hopp over</button>
     </div>
   )
 
@@ -41,7 +41,8 @@ export default function SmellFlow({ ssr, setSsr, ssf, setSsf, stl, sm, setSm, tR
       <div style={{ fontSize: 12, fontFamily: mn, color: TL, marginBottom: 6, marginTop: 8 }}>Hva kostet det? (kr)</div>
       <input type="number" style={ip} placeholder="F.eks. 65" value={sm.cost} onChange={e => setSm({ ...sm, cost: e.target.value })} />
       <button onClick={async () => {
-        await addSmell(sm)
+        const ok = await addSmell(sm)
+        if (!ok) return
         setSm({ trigger: "", feeling: "", what: "", cost: "" })
         setSsf(false)
         setSsr(false)

@@ -1,6 +1,7 @@
-import { P, PL, TM, TL, TX, AC, BD, BG, BG2, mn, sf, bp, ba, glass } from '../constants/theme'
+import { useState } from 'react'
+import { P, PL, TM, TL, TX, AC, BD, BG, BG2, mn, sf, bp, ip, ba, glass } from '../constants/theme'
 import { CONF } from '../constants/data'
-import { gmq } from '../utils/helpers'
+import { td, fd, ago, agl, gmq } from '../utils/helpers'
 import TriggerIcon from './TriggerIcon'
 import Confetti from './Confetti'
 import ErrToast from './ErrToast'
@@ -10,6 +11,10 @@ export default function ResistFlow({
   triggers, goals, addResist, curS, ms, nm, mp,
   err, setErr, onClose
 }) {
+  const [note, setNote] = useState("")
+  const [rd, setRd] = useState(td())
+  const [rdp, setRdp] = useState(false)
+
   if (rs === "trigger") return (
     <div style={{ ...ba, padding: 24, paddingBottom: 32 }} className="fade-in">
       <ErrToast err={err} setErr={setErr} />
@@ -18,29 +23,54 @@ export default function ResistFlow({
         <div style={{ fontSize: 22, fontWeight: 600 }}>Bra jobba!</div>
         <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 14, fontFamily: mn, color: TM, cursor: "pointer" }}>Lukk</button>
       </div>
-      <div style={{ fontSize: 16, color: TM, marginBottom: 24 }}>Hva slags fristelse var det?</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ fontSize: 16, color: TM, marginBottom: 16 }}>Hva slags fristelse var det?</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
         {triggers.map(t =>
           <button key={t.id} onClick={() => setSt2(t.id)} style={{
-            display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", borderRadius: 14,
+            display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 20,
             border: st2 === t.id ? `2px solid ${P}` : `1px solid ${BD}`,
-            backgroundColor: st2 === t.id ? PL : BG2, cursor: "pointer", textAlign: "left"
+            backgroundColor: st2 === t.id ? PL : BG2, cursor: "pointer"
           }}>
-            <TriggerIcon type={t.icon} size={22} color={st2 === t.id ? P : TM} />
-            <span style={{ fontSize: 16, fontFamily: sf, color: st2 === t.id ? P : TX, fontWeight: st2 === t.id ? 600 : 400 }}>{t.label}</span>
+            <TriggerIcon type={t.icon} size={16} color={st2 === t.id ? P : TM} />
+            <span style={{ fontSize: 14, fontFamily: sf, color: st2 === t.id ? P : TX, fontWeight: st2 === t.id ? 600 : 400 }}>{t.label}</span>
           </button>
         )}
       </div>
+
+      <div style={{ fontSize: 12, fontFamily: mn, color: TL, marginBottom: 6 }}>Situasjon (valgfritt)</div>
+      <textarea
+        style={{ ...ip, minHeight: 60, resize: "vertical" }}
+        placeholder="Fortell kjapt om situasjonen..."
+        value={note}
+        onChange={e => setNote(e.target.value)}
+      />
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, marginBottom: 4 }}>
+        <div style={{ fontSize: 12, fontFamily: mn, color: TL }}>Dato</div>
+        <button onClick={() => setRdp(!rdp)} style={{ background: "none", border: "none", fontSize: 12, fontFamily: mn, color: P, cursor: "pointer" }}>{rd === td() ? "I dag" : fd(rd)} &#9662;</button>
+      </div>
+      {rdp && <div style={glass}>
+        {[0, 1, 2, 3, 4, 5, 6].map(n =>
+          <button key={n} onClick={() => { setRd(ago(n)); setRdp(false) }} style={{
+            display: "block", width: "100%", padding: "12px 16px", textAlign: "left",
+            background: rd === ago(n) ? PL : "none", border: "none",
+            borderBottom: n < 6 ? "1px solid rgba(255,255,255,0.04)" : "none",
+            fontSize: 15, fontFamily: sf, color: TX, cursor: "pointer",
+            borderRadius: rd === ago(n) ? 8 : 0
+          }}>{agl(n)}</button>
+        )}
+      </div>}
+
       <button onClick={async () => {
         if (!st2) return
-        const ok = await addResist(st2)
+        const ok = await addResist(st2, note, rd)
         if (!ok) return
         const q = gmq(goals?.goals || [], goals?.whys || [], lq)
         setRq2(q)
         setLq(q)
         if (Math.random() < CONF) setCf(true)
         setRs("reward")
-      }} style={{ ...bp, marginTop: 32, opacity: st2 ? 1 : .4 }}>Registrer</button>
+      }} style={{ ...bp, marginTop: 20, opacity: st2 ? 1 : .4 }}>Registrer</button>
     </div>
   )
 

@@ -65,8 +65,8 @@ export default function Settings({
           </div>
           <button onClick={async () => {
             const g = { goals: eC ? [...eG, "custom:" + eC] : eG, whys: eW, customGoal: eC }
-            await saveProf(g, cfg)
-            onClose()
+            const ok = await saveProf(g, cfg)
+            if (ok) onClose()
           }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
         </>
       )}
@@ -94,8 +94,8 @@ export default function Settings({
           </div>
           <button onClick={async () => {
             const c = { ...(cfg || {}), triggers: eT, milestones: cfg?.milestones || DEF_MILESTONES, cost: cfg?.cost || DEF_COST }
-            await saveProf(goals, c)
-            onClose()
+            const ok = await saveProf(goals, c)
+            if (ok) onClose()
           }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
         </>
       )}
@@ -111,7 +111,7 @@ export default function Settings({
               }}>
                 <span style={{ fontSize: 14, fontFamily: mn, color: AC, fontWeight: 500, minWidth: 60 }}>{m.a.toLocaleString("nb-NO")} kr</span>
                 <span style={{ fontSize: 15, flex: 1 }}>{m.l}</span>
-                <button onClick={() => setEM(eM.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: SM, fontSize: 18, cursor: "pointer" }}>x</button>
+                <button onClick={() => setEM(eM.filter(x => x !== m))} style={{ background: "none", border: "none", color: SM, fontSize: 18, cursor: "pointer" }}>x</button>
               </div>
             )}
           </div>
@@ -123,9 +123,9 @@ export default function Settings({
             if (nMA && nML) { setEM([...eM, { a: parseInt(nMA), l: nML }]); setNMA(""); setNML("") }
           }} style={{ ...bgg, marginTop: 8, padding: "12px 20px", fontSize: 14 }}>+ Legg til</button>
           <button onClick={async () => {
-            const c = { ...(cfg || {}), triggers: cfg?.triggers || DEF_TRIGGERS, milestones: eM.sort((a, b) => a.a - b.a), cost: cfg?.cost || DEF_COST }
-            await saveProf(goals, c)
-            onClose()
+            const c = { ...(cfg || {}), triggers: cfg?.triggers || DEF_TRIGGERS, milestones: [...eM].sort((a, b) => a.a - b.a), cost: cfg?.cost || DEF_COST }
+            const ok = await saveProf(goals, c)
+            if (ok) onClose()
           }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
         </>
       )}
@@ -140,8 +140,8 @@ export default function Settings({
           </div>
           <button onClick={async () => {
             const c = { ...(cfg || {}), triggers: cfg?.triggers || DEF_TRIGGERS, milestones: cfg?.milestones || DEF_MILESTONES, cost: parseInt(eCost) || DEF_COST }
-            await saveProf(goals, c)
-            onClose()
+            const ok = await saveProf(goals, c)
+            if (ok) onClose()
           }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
           <div style={{ fontSize: 16, fontWeight: 600, marginTop: 32, marginBottom: 16 }}>Profil</div>
           <div style={glass}>
