@@ -100,7 +100,6 @@ export default function App() {
       const { data: prof, error: pe } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle()
       if (pe) console.error("Profile err:", pe)
       if (prof) sP({ goals: prof.goals, config: prof.config }); else sP(null)
-      sDR(true)
       const [r, s, c, w, wo] = await Promise.all([
         supabase.from("resists").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
         supabase.from("smells").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
@@ -110,6 +109,7 @@ export default function App() {
       ])
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
     } catch (e) { console.error("Load:", e) }
+    sDR(true)
     sL(false)
   }
 
