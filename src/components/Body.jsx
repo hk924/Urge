@@ -145,83 +145,84 @@ export default function Body({
             dk={metric}
             color={metricColor}
             sx={metricSuffix}
-            milestones={metric === "kg" ? milestones : []}
-            targetWeight={metric === "kg" ? targetWeight : null}
             height={200}
             range={range}
           />
         </div>
 
-        {/* Log weight button + form */}
-        <button onClick={() => setWef(!wef)} style={{
-          width: "100%", background: "none", border: `1px solid ${BD}`, borderRadius: 14,
-          padding: "14px 16px", fontSize: 14, fontFamily: sf, color: TM, cursor: "pointer",
-          textAlign: "center", marginBottom: 12
-        }}>{wef ? "Skjul skjema" : "+ Logg vekt"}</button>
-
-        {wef && (
-          <div style={{ ...glass, padding: 16 }}>
-            <input type="number" step="0.1" placeholder="Vekt (kg)" value={wi.kg} onChange={e => setWi({ ...wi, kg: e.target.value })} style={ip} />
-            <input type="number" step="0.1" placeholder="Fettprosent (%)" value={wi.fat} onChange={e => setWi({ ...wi, fat: e.target.value })} style={ip} />
-            <input type="number" step="0.1" placeholder="Muskelmasse (%)" value={wi.muscle} onChange={e => setWi({ ...wi, muscle: e.target.value })} style={ip} />
-            {datePicker(wd2, setWd2, wdp, setWdp)}
-            <button onClick={async () => {
-              if (!wi.kg) return
-              await addWeight(parseFloat(wi.kg), wi.fat ? parseFloat(wi.fat) : null, wi.muscle ? parseFloat(wi.muscle) : null, wd2)
-              setWi({ kg: "", fat: "", muscle: "" })
-              setWd2(td())
-              setWef(false)
-            }} style={{ ...bp, padding: "12px 24px", fontSize: 14 }}>Lagre</button>
-          </div>
-        )}
-
         {/* Milestones section */}
         {milestones.length > 0 && (
           <div style={glass}>
-            <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase", marginBottom: 12 }}>Delmål</div>
-            {milestones.map((m, i) => {
-              const isLast = i === milestones.length - 1
-              const reached = lt && lt.kg <= m.target
-              const isNext = !reached && (i === 0 || (lt && lt.kg <= milestones[i - 1]?.target))
-              const remaining = lt ? (lt.kg - m.target).toFixed(1) : null
-
-              return (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
-                  borderBottom: i < milestones.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none"
-                }}>
-                  {/* Status icon */}
+            <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase", marginBottom: 16 }}>Delmål</div>
+            <div style={{ position: "relative", paddingLeft: 20 }}>
+              {/* Vertical line behind all items */}
+              <div style={{
+                position: "absolute", left: 9, top: 10, bottom: 10, width: 2,
+                backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 1
+              }} />
+              {/* Green progress fill over the vertical line */}
+              {(() => {
+                const reachedCount = milestones.filter(m => lt && lt.kg <= m.target).length
+                if (reachedCount === 0) return null
+                const pct = (reachedCount / milestones.length) * 100
+                return (
                   <div style={{
-                    width: 28, height: 28, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 600,
-                    backgroundColor: reached ? "rgba(74,222,128,0.15)" : isNext ? PL : "rgba(255,255,255,0.04)",
-                    color: reached ? AC : isNext ? P : TL,
-                    border: reached ? `1.5px solid ${AC}` : isNext ? `1.5px solid ${P}` : `1px solid ${BD}`
+                    position: "absolute", left: 9, top: 10, width: 2, borderRadius: 1,
+                    height: `calc(${pct}% - ${pct < 100 ? 10 : 20}px)`,
+                    background: `linear-gradient(to bottom, ${AC}, ${P})`
+                  }} />
+                )
+              })()}
+
+              {milestones.map((m, i) => {
+                const isLast = i === milestones.length - 1
+                const reached = lt && lt.kg <= m.target
+                const isNext = !reached && (i === 0 || (lt && lt.kg <= milestones[i - 1]?.target))
+                const remaining = lt ? (lt.kg - m.target).toFixed(1) : null
+
+                const dotSize = 20
+                const dotColor = reached ? AC : isNext ? P : TL
+
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", gap: 14,
+                    paddingBottom: isLast ? 0 : 18, position: "relative"
                   }}>
-                    {reached ? (isLast ? "\u2605" : "\u2713") : isNext ? "\u2022" : i + 1}
-                  </div>
-
-                  {/* Label + status */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: reached ? 600 : 400, color: reached ? AC : TX }}>{m.label}</div>
-                    <div style={{ fontSize: 11, fontFamily: mn, color: reached ? AC : TL, marginTop: 2 }}>
-                      {reached ? "Nådd!" : remaining && parseFloat(remaining) > 0 ? `${remaining} kg igjen` : ""}
+                    {/* Dot on the vertical line */}
+                    <div style={{
+                      width: dotSize, height: dotSize, borderRadius: dotSize / 2,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      marginLeft: -20 + (10 - dotSize / 2),
+                      flexShrink: 0, zIndex: 1,
+                      backgroundColor: reached ? AC : isNext ? P : "rgba(255,255,255,0.06)",
+                      border: reached || isNext ? "none" : `1.5px solid ${BD}`
+                    }}>
+                      {reached ? (
+                        <span style={{ fontSize: 11, color: "#0a0a0f", fontWeight: 700 }}>{isLast ? "\u2605" : "\u2713"}</span>
+                      ) : (
+                        <span style={{ fontSize: 9, fontFamily: mn, color: isNext ? "#fff" : TL, fontWeight: 600 }}>{i + 1}</span>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Progress bar */}
-                  {!reached && remaining && parseFloat(remaining) > 0 && lt && (
-                    <div style={{ width: 48, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.06)" }}>
+                    {/* Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        height: "100%", borderRadius: 2,
-                        backgroundColor: isNext ? P : TL,
-                        width: `${Math.max(0, Math.min(100, (1 - parseFloat(remaining) / (lt.kg - (bodyGoals?.target_weight || m.target))) * 100))}%`
-                      }} />
+                        fontSize: 14, fontWeight: reached ? 600 : 400,
+                        color: reached ? AC : isNext ? TX : TM
+                      }}>{m.label}</div>
+                      <div style={{ fontSize: 11, fontFamily: mn, color: reached ? AC : TL, marginTop: 1 }}>
+                        {reached ? "Nådd!" : remaining && parseFloat(remaining) > 0 ? `${remaining} kg igjen` : ""}
+                      </div>
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    {/* Target weight */}
+                    <div style={{ fontSize: 13, fontFamily: mn, color: reached ? AC : TL, fontWeight: 500, flexShrink: 0 }}>
+                      {m.target} kg
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -252,6 +253,29 @@ export default function Body({
                 }}>{dWId === w.id ? "Bekreft?" : "\u2715"}</button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Log weight button + form */}
+        <button onClick={() => setWef(!wef)} style={{
+          width: "100%", background: "none", border: `1px solid ${BD}`, borderRadius: 14,
+          padding: "14px 16px", fontSize: 14, fontFamily: sf, color: TM, cursor: "pointer",
+          textAlign: "center", marginBottom: 12
+        }}>{wef ? "Skjul skjema" : "+ Logg vekt"}</button>
+
+        {wef && (
+          <div style={{ ...glass, padding: 16 }}>
+            <input type="number" step="0.1" placeholder="Vekt (kg)" value={wi.kg} onChange={e => setWi({ ...wi, kg: e.target.value })} style={ip} />
+            <input type="number" step="0.1" placeholder="Fettprosent (%)" value={wi.fat} onChange={e => setWi({ ...wi, fat: e.target.value })} style={ip} />
+            <input type="number" step="0.1" placeholder="Muskelmasse (%)" value={wi.muscle} onChange={e => setWi({ ...wi, muscle: e.target.value })} style={ip} />
+            {datePicker(wd2, setWd2, wdp, setWdp)}
+            <button onClick={async () => {
+              if (!wi.kg) return
+              await addWeight(parseFloat(wi.kg), wi.fat ? parseFloat(wi.fat) : null, wi.muscle ? parseFloat(wi.muscle) : null, wd2)
+              setWi({ kg: "", fat: "", muscle: "" })
+              setWd2(td())
+              setWef(false)
+            }} style={{ ...bp, padding: "12px 24px", fontSize: 14 }}>Lagre</button>
           </div>
         )}
 
