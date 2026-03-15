@@ -70,6 +70,7 @@ export default function App() {
   const [wthS, sWthS] = useState(false)
   const [wthE, sWthE] = useState("")
   const [wthLoaded, sWthLoaded] = useState(false)
+  const [bodyGoals, sBodyGoals] = useState(null)
 
   const goals = profile?.goals || null
   const cfg = profile?.config || null
@@ -111,17 +112,19 @@ export default function App() {
 
   async function loadData(uid) {
     try {
-      const [pf, r, s, c, w, wo] = await Promise.all([
+      const [pf, r, s, c, w, wo, bg] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
         supabase.from("resists").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
         supabase.from("smells").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
         supabase.from("checkins").select("*").eq("user_id", uid).order("date", { ascending: false }),
         supabase.from("weights").select("*").eq("user_id", uid).order("date", { ascending: false }),
         supabase.from("workouts").select("*").eq("user_id", uid).order("date", { ascending: false }),
+        supabase.from("body_goals").select("*").eq("user_id", uid).maybeSingle(),
       ])
       if (pf.error) console.error("Profile err:", pf.error)
       if (pf.data) sP({ goals: pf.data.goals, config: pf.data.config }); else sP(null)
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
+      sBodyGoals(bg.data || null)
     } catch (e) { console.error("Load:", e) }
     sL(false)
   }
@@ -186,6 +189,19 @@ export default function App() {
     const { data, error } = await supabase.from("workouts").insert({ user_id: user.id, type: ty, duration: dur, date: date || td() }).select().single()
     if (error) { console.error("Workout err:", error); sErr("Kunne ikke lagre trening."); return }
     if (data) sWko(p => [data, ...p])
+  }
+
+  async function saveBodyGoals(data) {
+    const payload = { ...data, user_id: user.id }
+    let result
+    if (bodyGoals?.id) {
+      result = await supabase.from("body_goals").update(payload).eq("id", bodyGoals.id).select().single()
+    } else {
+      result = await supabase.from("body_goals").insert(payload).select().single()
+    }
+    if (result.error) { console.error("Save body_goals err:", result.error); sErr("Kunne ikke lagre kroppsmål."); return false }
+    sBodyGoals(result.data)
+    return true
   }
 
   async function connectWithings() {
@@ -351,6 +367,7 @@ export default function App() {
         onClose={closeSettings}
         err={err} setErr={sErr}
         wthC={wthC} wthE={wthE} connectWithings={connectWithings} disconnectWithings={disconnectWithingsFlow}
+        bodyGoals={bodyGoals} saveBodyGoals={saveBodyGoals} wgt={wgt}
       />
     )
   }
@@ -402,11 +419,10 @@ export default function App() {
 
   if (sc === "body") return (
     <Body
-      wgt={wgt} wko={wko} bt={bt} setBt={sBt}
-      wf={wf} setWf={sWf} wef={wef} setWef={sWef}
-      wi={wi} setWi={sWi} woi={woi} setWoi={sWoi}
-      addWeight={addWeight} addWorkout={addWorkout} delWeight={delWeight} delWorkout={delWorkout}
+      wgt={wgt} wi={wi} setWi={sWi}
+      addWeight={addWeight} delWeight={delWeight}
       sc={sc} setScreen={sSc}
+      bodyGoals={bodyGoals}
       wthC={wthC} wthS={wthS} wthE={wthE}
       connectWithings={connectWithings} syncWithings={syncWithingsData} disconnectWithings={disconnectWithingsFlow}
     />

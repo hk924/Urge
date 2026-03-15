@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { P, PL, AC, SM, TM, TL, TX, BD, BG2, mn, sf, bp, bgg, ip, ba, glass } from '../constants/theme'
 import { DEF_GOALS, WHY_OPTIONS, DEF_TRIGGERS, DEF_MILESTONES, DEF_COST } from '../constants/data'
 import { supabase } from '../lib/supabase'
+import { td, generateMilestones } from '../utils/helpers'
 import TriggerIcon from './TriggerIcon'
 import ErrToast from './ErrToast'
 
@@ -12,9 +14,30 @@ export default function Settings({
   eCost, setECost,
   setTab, setTab2, saveProf, onClose,
   err, setErr,
-  wthC, wthE, connectWithings, disconnectWithings
+  wthC, wthE, connectWithings, disconnectWithings,
+  bodyGoals, saveBodyGoals, wgt
 }) {
   const tog2 = (a, s, id) => { s(a.includes(id) ? a.filter(x => x !== id) : [...a, id]) }
+
+  const [bgStartDate, setBgStartDate] = useState(bodyGoals?.start_date || td())
+  const [bgTargetWeight, setBgTargetWeight] = useState(bodyGoals?.target_weight || "")
+  const [bgHeightCm, setBgHeightCm] = useState(bodyGoals?.height_cm || "")
+  const [bgMilestones, setBgMilestones] = useState(bodyGoals?.milestones || [])
+
+  useEffect(() => {
+    setBgStartDate(bodyGoals?.start_date || td())
+    setBgTargetWeight(bodyGoals?.target_weight || "")
+    setBgHeightCm(bodyGoals?.height_cm || "")
+    setBgMilestones(bodyGoals?.milestones || [])
+  }, [bodyGoals])
+
+  function onTargetWeightChange(val) {
+    setBgTargetWeight(val)
+    const tw = parseFloat(val)
+    if (!tw || tw <= 0) return
+    const sw = bodyGoals?.start_weight || (wgt && wgt.length > 0 ? wgt[wgt.length - 1].kg : null)
+    if (sw && tw < sw) setBgMilestones(generateMilestones(sw, tw))
+  }
 
   return (
     <div style={{ ...ba, padding: 24, paddingBottom: 32 }} className="fade-in">
@@ -25,11 +48,11 @@ export default function Settings({
       </div>
 
       <div style={{ display: "flex", gap: 0, marginBottom: 24, backgroundColor: BG2, borderRadius: 14, border: `1px solid ${BD}`, overflow: "hidden", padding: 3 }}>
-        {[["goals", "Mål"], ["triggers", "Triggere"], ["milestones", "Miles."], ["other", "Annet"]].map(([id, l]) =>
+        {[["goals", "Mål"], ["triggers", "Triggere"], ["body", "Kropp"], ["milestones", "Miles."], ["other", "Annet"]].map(([id, l]) =>
           <button key={id} onClick={() => setTab2(id)} style={{
             flex: 1, padding: "10px 4px", border: "none", borderRadius: 11,
             background: setTab === id ? `linear-gradient(135deg, ${P}, #6344d0)` : "transparent",
-            color: setTab === id ? "#fff" : TM, fontSize: 11, fontFamily: mn,
+            color: setTab === id ? "#fff" : TM, fontSize: 10, fontFamily: mn,
             cursor: "pointer", fontWeight: setTab === id ? 500 : 400
           }}>{l}</button>
         )}
@@ -96,6 +119,53 @@ export default function Settings({
           <button onClick={async () => {
             const c = { ...(cfg || {}), triggers: eT, milestones: cfg?.milestones || DEF_MILESTONES, cost: cfg?.cost || DEF_COST }
             const ok = await saveProf(goals, c)
+            if (ok) onClose()
+          }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
+        </>
+      )}
+
+      {setTab === "body" && (
+        <>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Kroppsmål</div>
+
+          <div style={{ fontSize: 13, color: TM, marginBottom: 6 }}>Startdato</div>
+          <input type="date" value={bgStartDate} onChange={e => setBgStartDate(e.target.value)} style={ip} />
+
+          <div style={{ fontSize: 13, color: TM, marginBottom: 6, marginTop: 8 }}>Målvekt (kg)</div>
+          <input type="number" step="0.1" placeholder="F.eks. 80" value={bgTargetWeight} onChange={e => onTargetWeightChange(e.target.value)} style={ip} />
+
+          <div style={{ fontSize: 13, color: TM, marginBottom: 6, marginTop: 8 }}>Høyde (cm)</div>
+          <input type="number" step="0.1" placeholder="F.eks. 180" value={bgHeightCm} onChange={e => setBgHeightCm(e.target.value)} style={ip} />
+
+          {bgMilestones.length > 0 && (
+            <>
+              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 10 }}>Delmål</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {bgMilestones.map((m, i) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+                    borderRadius: 12, border: `1px solid ${BD}`, backgroundColor: BG2
+                  }}>
+                    <span style={{ fontSize: 14, fontFamily: mn, color: P, fontWeight: 500, minWidth: 60 }}>{m.target} kg</span>
+                    <span style={{ fontSize: 14, flex: 1, color: TX }}>{m.label}</span>
+                    <button onClick={() => setBgMilestones(bgMilestones.filter((_, j) => j !== i))} style={{
+                      background: "none", border: "none", color: SM, fontSize: 16, cursor: "pointer"
+                    }}>x</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <button onClick={async () => {
+            const sw = bodyGoals?.start_weight || (wgt && wgt.length > 0 ? wgt[wgt.length - 1].kg : null)
+            const ok = await saveBodyGoals({
+              start_date: bgStartDate,
+              start_weight: sw || null,
+              target_weight: bgTargetWeight ? parseFloat(bgTargetWeight) : null,
+              height_cm: bgHeightCm ? parseFloat(bgHeightCm) : null,
+              milestones: bgMilestones
+            })
             if (ok) onClose()
           }} style={{ ...bp, marginTop: 24 }}>Lagre</button>
         </>

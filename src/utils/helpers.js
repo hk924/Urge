@@ -46,3 +46,15 @@ export function gmq(goals, whys, last) {
   do { q = GQ[Math.floor(Math.random() * GQ.length)].q } while (q === last && GQ.length > 1)
   return q.replace("{goal}", gs).replace("{why}", ws)
 }
+
+export function generateMilestones(startWeight, targetWeight) {
+  let first = Math.floor(startWeight / 5) * 5
+  if (first >= startWeight) first -= 5
+  const ms = []
+  for (let w = first; w >= targetWeight; w -= 5)
+    ms.push({ label: `Under ${w} kg`, target: w })
+  if (!ms.length || ms[ms.length - 1].target !== targetWeight)
+    ms.push({ label: `Målvekt: ${targetWeight} kg`, target: targetWeight })
+  if (ms.length > 5) return [...ms.slice(0, 4), ms[ms.length - 1]]
+  return ms
+}
