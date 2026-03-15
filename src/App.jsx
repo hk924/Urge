@@ -112,19 +112,23 @@ export default function App() {
 
   async function loadData(uid) {
     try {
-      const [pf, r, s, c, w, wo, bg] = await Promise.all([
+      const [pf, r, s, c, w, wo] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
         supabase.from("resists").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
         supabase.from("smells").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
         supabase.from("checkins").select("*").eq("user_id", uid).order("date", { ascending: false }),
         supabase.from("weights").select("*").eq("user_id", uid).order("date", { ascending: false }),
         supabase.from("workouts").select("*").eq("user_id", uid).order("date", { ascending: false }),
-        supabase.from("body_goals").select("*").eq("user_id", uid).maybeSingle(),
       ])
       if (pf.error) console.error("Profile err:", pf.error)
       if (pf.data) sP({ goals: pf.data.goals, config: pf.data.config }); else sP(null)
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
-      sBodyGoals(bg.data || null)
+      // Fetch body_goals separately so it doesn't block app loading
+      try {
+        const bg = await supabase.from("body_goals").select("*").eq("user_id", uid).maybeSingle()
+        if (bg.error) console.error("Body goals err:", bg.error)
+        sBodyGoals(bg.data || null)
+      } catch (e) { console.error("Body goals load:", e) }
     } catch (e) { console.error("Load:", e) }
     sL(false)
   }
