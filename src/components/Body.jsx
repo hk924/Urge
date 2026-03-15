@@ -154,70 +154,71 @@ export default function Body({
         {milestones.length > 0 && (
           <div style={glass}>
             <div style={{ fontSize: 11, fontFamily: mn, color: TL, textTransform: "uppercase", marginBottom: 16 }}>Delmål</div>
-            <div style={{ position: "relative", paddingLeft: 20 }}>
-              {/* Vertical line behind all items */}
-              <div style={{
-                position: "absolute", left: 9, top: 10, bottom: 10, width: 2,
-                backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 1
-              }} />
-              {/* Green progress fill over the vertical line */}
-              {(() => {
-                const reachedCount = milestones.filter(m => lt && lt.kg <= m.target).length
-                if (reachedCount === 0) return null
-                const pct = (reachedCount / milestones.length) * 100
-                return (
-                  <div style={{
-                    position: "absolute", left: 9, top: 10, width: 2, borderRadius: 1,
-                    height: `calc(${pct}% - ${pct < 100 ? 10 : 20}px)`,
-                    background: `linear-gradient(to bottom, ${AC}, ${P})`
-                  }} />
-                )
-              })()}
-
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {milestones.map((m, i) => {
                 const isLast = i === milestones.length - 1
                 const reached = lt && lt.kg <= m.target
                 const isNext = !reached && (i === 0 || (lt && lt.kg <= milestones[i - 1]?.target))
                 const remaining = lt ? (lt.kg - m.target).toFixed(1) : null
 
-                const dotSize = 20
-                const dotColor = reached ? AC : isNext ? P : TL
+                // Calculate progress towards this milestone
+                // Use the previous milestone (or start weight) as the "from" point
+                const prevTarget = i > 0 ? milestones[i - 1].target : (bodyGoals?.start_weight || null)
+                let progress = 0
+                if (reached) {
+                  progress = 100
+                } else if (lt && prevTarget) {
+                  const totalDist = prevTarget - m.target
+                  const covered = prevTarget - lt.kg
+                  progress = totalDist > 0 ? Math.max(0, Math.min(100, (covered / totalDist) * 100)) : 0
+                }
+
+                const barColor = reached ? AC : isNext ? P : TL
+                const dotSize = 28
 
                 return (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "center", gap: 14,
-                    paddingBottom: isLast ? 0 : 18, position: "relative"
-                  }}>
-                    {/* Dot on the vertical line */}
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    {/* Icon */}
                     <div style={{
-                      width: dotSize, height: dotSize, borderRadius: dotSize / 2,
+                      width: dotSize, height: dotSize, borderRadius: dotSize / 2, flexShrink: 0,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      marginLeft: -20 + (10 - dotSize / 2),
-                      flexShrink: 0, zIndex: 1,
-                      backgroundColor: reached ? AC : isNext ? P : "rgba(255,255,255,0.06)",
-                      border: reached || isNext ? "none" : `1.5px solid ${BD}`
+                      backgroundColor: reached ? "rgba(74,222,128,0.15)" : isNext ? PL : "rgba(255,255,255,0.04)",
+                      border: reached ? `1.5px solid ${AC}` : isNext ? `1.5px solid ${P}` : `1.5px solid ${BD}`
                     }}>
                       {reached ? (
-                        <span style={{ fontSize: 11, color: "#0a0a0f", fontWeight: 700 }}>{isLast ? "\u2605" : "\u2713"}</span>
+                        <span style={{ fontSize: 13, color: AC, fontWeight: 700 }}>{isLast ? "\u2728" : "\u2713"}</span>
+                      ) : isNext ? (
+                        <span style={{ fontSize: 14, color: P }}>{"\u2022"}</span>
+                      ) : isLast ? (
+                        <span style={{ fontSize: 12, color: TL }}>{"\u2728"}</span>
                       ) : (
-                        <span style={{ fontSize: 9, fontFamily: mn, color: isNext ? "#fff" : TL, fontWeight: 600 }}>{i + 1}</span>
+                        <span style={{ fontSize: 10, fontFamily: mn, color: TL, fontWeight: 600 }}>{i + 1}</span>
                       )}
                     </div>
 
-                    {/* Content */}
+                    {/* Content + bar */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: 14, fontWeight: reached ? 600 : 400,
-                        color: reached ? AC : isNext ? TX : TM
-                      }}>{m.label}</div>
-                      <div style={{ fontSize: 11, fontFamily: mn, color: reached ? AC : TL, marginTop: 1 }}>
-                        {reached ? "Nådd!" : remaining && parseFloat(remaining) > 0 ? `${remaining} kg igjen` : ""}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <div style={{
+                          fontSize: 15, fontWeight: reached || isNext ? 600 : 400,
+                          color: reached ? AC : isNext ? TX : TM
+                        }}>{m.label}</div>
+                        <div style={{ fontSize: 13, fontFamily: mn, color: reached ? AC : TL, fontWeight: 500, flexShrink: 0, marginLeft: 8 }}>
+                          {reached ? "Nådd!" : remaining && parseFloat(remaining) > 0 ? `${remaining} kg igjen` : ""}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Target weight */}
-                    <div style={{ fontSize: 13, fontFamily: mn, color: reached ? AC : TL, fontWeight: 500, flexShrink: 0 }}>
-                      {m.target} kg
+                      {/* Progress bar */}
+                      {(reached || isNext) && (
+                        <div style={{
+                          width: "100%", height: 4, borderRadius: 2, marginTop: 6,
+                          backgroundColor: "rgba(255,255,255,0.06)"
+                        }}>
+                          <div style={{
+                            height: "100%", borderRadius: 2, backgroundColor: barColor,
+                            width: `${progress}%`, transition: "width 0.3s ease"
+                          }} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
