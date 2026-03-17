@@ -80,17 +80,34 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true
-    const timeout = setTimeout(() => { if (mounted && loading) { sL(false) } }, 8000)
-    async function init() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (window.location.hash?.includes("access_token")) window.history.replaceState(null, "", window.location.pathname)
-        if (!mounted) return
-        if (session?.user) { await loadData(session.user.id); sU(session.user) }
-        else sL(false)
-      } catch (e) { console.error("Init:", e); if (mounted) sL(false) }
-    }
-    init()
+
+    // Check localStorage for an existing session — if present, stay in loading
+    // state and let onAuthStateChange handle restoration (even if token refresh
+    // is slow on PWA cold-start).
+    const hasStoredSession = !!window.localStorage.getItem('urge-auth')
+
+    // Safety timeout: only show login if there's no stored session hint.
+    // With a stored session we give Supabase up to 30s to refresh the token.
+    const timeout = setTimeout(() => {
+      if (mounted && loading) sL(false)
+    }, hasStoredSession ? 30000 : 5000)
+
+    // Register listener FIRST so we never miss the INITIAL_SESSION event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (ev, session) => {
+      if (!mounted) return
+      if ((ev === "INITIAL_SESSION" || ev === "SIGNED_IN" || ev === "TOKEN_REFRESHED") && session?.user) {
+        await loadData(session.user.id); sU(session.user); sAS("email"); sOTP("")
+      }
+      if (ev === "INITIAL_SESSION" && !session) {
+        // Supabase confirmed there is no valid session — show login
+        sL(false)
+      }
+      if (ev === "SIGNED_OUT") { sU(null); sP(null); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
+    })
+
+    // Clean up URL fragments from OAuth redirects
+    if (window.location.hash?.includes("access_token")) window.history.replaceState(null, "", window.location.pathname)
+
     // Handle Withings OAuth redirect
     const urlParams = new URLSearchParams(window.location.search)
     const wthParam = urlParams.get("withings")
@@ -100,13 +117,6 @@ export default function App() {
       else if (wthParam === "error") { sWthE("Tilkobling til Withings feilet. Prøv igjen.") }
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (ev, session) => {
-      if (!mounted) return
-      if ((ev === "SIGNED_IN" || ev === "TOKEN_REFRESHED") && session?.user) {
-        await loadData(session.user.id); sU(session.user); sAS("email"); sOTP("")
-      }
-      if (ev === "SIGNED_OUT") { sU(null); sP(null); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
-    })
     return () => { mounted = false; clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
 
