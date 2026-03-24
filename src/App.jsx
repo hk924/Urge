@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
-import { getWithingsStatus, getWithingsAuthUrl, syncWithings, disconnectWithings } from './lib/withings'
 import { DEF_TRIGGERS, DEF_MILESTONES, DEF_COST, ST } from './constants/data'
 import { ba, mn, TL } from './constants/theme'
 import { td, gmq } from './utils/helpers'
@@ -11,10 +10,11 @@ import Onboarding from './components/Onboarding'
 import Home from './components/Home'
 import ResistFlow from './components/ResistFlow'
 import SmellFlow from './components/SmellFlow'
-import Stats from './components/Stats'
-import Log from './components/Log'
-import Body from './components/Body'
-import Settings from './components/Settings'
+
+const Stats = lazy(() => import('./components/Stats'))
+const Log = lazy(() => import('./components/Log'))
+const Body = lazy(() => import('./components/Body'))
+const Settings = lazy(() => import('./components/Settings'))
 
 export default function App() {
   const [user, sU] = useState(null)
@@ -24,6 +24,7 @@ export default function App() {
   const [otpCode, sOTP] = useState("")
   const [authMsg, sAM] = useState("")
   const [loading, sL] = useState(true)
+  const [dataReady, sDR] = useState(false)
   const [profile, sP] = useState(null)
   const [sc, sSc] = useState("home")
   const [err, sErr] = useState("")
@@ -96,13 +97,13 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (ev, session) => {
       if (!mounted) return
       if ((ev === "INITIAL_SESSION" || ev === "SIGNED_IN" || ev === "TOKEN_REFRESHED") && session?.user) {
-        await loadData(session.user.id); sU(session.user); sAS("email"); sOTP("")
+        sU(session.user); sAS("email"); sOTP(""); sL(false)
+        loadData(session.user.id)
       }
       if (ev === "INITIAL_SESSION" && !session) {
-        // Supabase confirmed there is no valid session — show login
         sL(false)
       }
-      if (ev === "SIGNED_OUT") { sU(null); sP(null); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
+      if (ev === "SIGNED_OUT") { sU(null); sP(null); sDR(false); sRes([]); sSml([]); sChk([]); sWgt([]); sWko([]) }
     })
 
     // Clean up URL fragments from OAuth redirects
@@ -124,23 +125,21 @@ export default function App() {
     try {
       const [pf, r, s, c, w, wo] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-        supabase.from("resists").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
-        supabase.from("smells").select("*").eq("user_id", uid).order("logged_at", { ascending: false }),
-        supabase.from("checkins").select("*").eq("user_id", uid).order("date", { ascending: false }),
-        supabase.from("weights").select("*").eq("user_id", uid).order("date", { ascending: false }),
-        supabase.from("workouts").select("*").eq("user_id", uid).order("date", { ascending: false }),
+        supabase.from("resists").select("id,user_id,trigger_type,date,logged_at,note").eq("user_id", uid).order("logged_at", { ascending: false }),
+        supabase.from("smells").select("id,user_id,trigger_text,feeling,what,cost,date,logged_at,trigger_type").eq("user_id", uid).order("logged_at", { ascending: false }),
+        supabase.from("checkins").select("id,user_id,mood,mood_id,date").eq("user_id", uid).order("date", { ascending: false }),
+        supabase.from("weights").select("id,user_id,kg,fat,muscle,date,source").eq("user_id", uid).order("date", { ascending: false }),
+        supabase.from("workouts").select("id,user_id,type,duration,date").eq("user_id", uid).order("date", { ascending: false }),
       ])
       if (pf.error) console.error("Profile err:", pf.error)
       if (pf.data) sP({ goals: pf.data.goals, config: pf.data.config }); else sP(null)
       sRes(r.data || []); sSml(s.data || []); sChk(c.data || []); sWgt(w.data || []); sWko(wo.data || [])
-      // Fetch body_goals separately so it doesn't block app loading
-      try {
-        const bg = await supabase.from("body_goals").select("*").eq("user_id", uid).maybeSingle()
-        if (bg.error) console.error("Body goals err:", bg.error)
-        sBodyGoals(bg.data || null)
-      } catch (e) { console.error("Body goals load:", e) }
-    } catch (e) { console.error("Load:", e) }
-    sL(false)
+      sDR(true)
+    } catch (e) { console.error("Load:", e); sDR(true) }
+    // body_goals loaded in the background — not needed for Home screen
+    supabase.from("body_goals").select("*").eq("user_id", uid).maybeSingle()
+      .then(bg => { if (bg.data) sBodyGoals(bg.data) })
+      .catch(e => console.error("Body goals load:", e))
   }
 
   async function sendOTP() {
@@ -220,6 +219,7 @@ export default function App() {
 
   async function connectWithings() {
     try {
+      const { getWithingsAuthUrl } = await import('./lib/withings')
       const url = await getWithingsAuthUrl()
       window.location.href = url
     } catch (e) { console.error("Withings auth:", e); sWthE("Kunne ikke starte tilkobling.") }
@@ -228,6 +228,7 @@ export default function App() {
   async function syncWithingsData() {
     sWthS(true); sWthE("")
     try {
+      const { syncWithings } = await import('./lib/withings')
       const result = await syncWithings()
       if (result.synced > 0) {
         await loadData(user.id)
@@ -245,6 +246,7 @@ export default function App() {
 
   async function disconnectWithingsFlow() {
     try {
+      const { disconnectWithings } = await import('./lib/withings')
       await disconnectWithings()
       sWthC(false); sWthE("")
     } catch (e) { console.error("Withings disconnect:", e); sWthE("Kunne ikke koble fra.") }
@@ -288,7 +290,9 @@ export default function App() {
   useEffect(() => {
     if ((sc === "body" || showSet) && user && !wthLoaded) {
       sWthLoaded(true)
-      getWithingsStatus().then(c => sWthC(c)).catch(() => {})
+      import('./lib/withings').then(({ getWithingsStatus }) =>
+        getWithingsStatus().then(c => sWthC(c))
+      ).catch(() => {})
     }
   }, [sc, showSet, user, wthLoaded])
 
@@ -301,7 +305,7 @@ export default function App() {
   const curS = useMemo(() => calcCurrentStreak(sml, res, chk), [sml, res, chk])
   const besS = useMemo(() => calcBestStreak(sml, res, chk, curS), [sml, res, chk, curS])
 
-  const tc = triggers.map(t => ({ ...t, rc: res.filter(r => r.trigger_type === t.id).length, sc: sml.filter(s => s.trigger_type === t.id).length }))
+  const tc = useMemo(() => triggers.map(t => ({ ...t, rc: res.filter(r => r.trigger_type === t.id).length, sc: sml.filter(s => s.trigger_type === t.id).length })), [triggers, res, sml])
 
   const weekData = useMemo(() => {
     const today = new Date()
@@ -356,8 +360,8 @@ export default function App() {
     />
   )
 
-  // Onboarding
-  if (user && !goals) return (
+  // Onboarding — only show after profile has been fetched to avoid flash
+  if (user && dataReady && !goals) return (
     <Onboarding
       obStep={obStep} setObStep={sOb}
       selG={selG} setSelG={sSG}
@@ -368,10 +372,12 @@ export default function App() {
     />
   )
 
+  const lazyFallback = <div style={{ ...ba, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 14, fontFamily: mn, color: TL }}>Laster...</div></div>
+
   // Settings
   if (showSet) {
     return (
-      <Settings
+      <Suspense fallback={lazyFallback}><Settings
         goals={goals} cfg={cfg} triggers={triggers} milestones={milestones} smellCost={smellCost} user={user}
         eG={eG} setEG={sEG} eW={eW} setEW={sEW} eC={eC} setEC={sEC}
         eT={eT} setET={sET} nT={nT} setNT={sNT}
@@ -382,7 +388,7 @@ export default function App() {
         err={err} setErr={sErr}
         wthC={wthC} wthE={wthE} connectWithings={connectWithings} disconnectWithings={disconnectWithingsFlow}
         bodyGoals={bodyGoals} saveBodyGoals={saveBodyGoals} wgt={wgt}
-      />
+      /></Suspense>
     )
   }
 
@@ -424,22 +430,22 @@ export default function App() {
   )
 
   if (sc === "stats") return (
-    <Stats curS={curS} besS={besS} tR={tR} tS={tS} ms={ms} smellCost={smellCost} milestones={milestones} tc={tc} weekData={weekData} sc={sc} setScreen={sSc} />
+    <Suspense fallback={lazyFallback}><Stats curS={curS} besS={besS} tR={tR} tS={tS} ms={ms} smellCost={smellCost} milestones={milestones} tc={tc} weekData={weekData} sc={sc} setScreen={sSc} /></Suspense>
   )
 
   if (sc === "log") return (
-    <Log sml={sml} res={res} triggers={triggers} sel={sel} setSel={sSel} delResist={delResist} delSmell={delSmell} sc={sc} setScreen={sSc} />
+    <Suspense fallback={lazyFallback}><Log sml={sml} res={res} triggers={triggers} sel={sel} setSel={sSel} delResist={delResist} delSmell={delSmell} sc={sc} setScreen={sSc} /></Suspense>
   )
 
   if (sc === "body") return (
-    <Body
+    <Suspense fallback={lazyFallback}><Body
       wgt={wgt} wi={wi} setWi={sWi}
       addWeight={addWeight} delWeight={delWeight}
       sc={sc} setScreen={sSc}
       bodyGoals={bodyGoals}
       wthC={wthC} wthS={wthS} wthE={wthE}
       connectWithings={connectWithings} syncWithings={syncWithingsData} disconnectWithings={disconnectWithingsFlow}
-    />
+    /></Suspense>
   )
 
   return null
