@@ -1,4 +1,4 @@
-const CACHE_NAME = 'urge-v3'
+const CACHE_NAME = 'urge-v4'
 
 const PRECACHE = [
   '/',
