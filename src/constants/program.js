@@ -30,7 +30,8 @@ export const ROUTINES = {
 
 export const WARMUP_FIRST = "marsj"
 export const WARMUP_POOL = ["armsirkler", "skulderruller", "hoftesirkler", "knebøy-uten-vekt", "katt-ku", "tåhev"]
-export const CORE_POOL = ["dead-bug", "planke", "sideplanke", "superman", "omvendt-crunch", "bird-dog", "koffertbæring", "pushups"]
+// No plank-position exercises (planke, sideplanke, push-ups): advised against after heart surgery.
+export const CORE_POOL = ["dead-bug", "hælberøring", "superman", "omvendt-crunch", "bird-dog", "russian-twist", "koffertbæring"]
 
 function parseDate(ds) {
   const [y, m, d] = ds.split("-").map(Number)

@@ -114,3 +114,10 @@ describe('program', () => {
     expect(buildPlan('A', 0, 0).warmup[0]).toBe('marsj')
   })
 })
+
+describe('safety', () => {
+  it('core rotation has no plank-position exercises', async () => {
+    const { CORE_POOL } = await import('../constants/program')
+    for (const id of ['planke', 'sideplanke', 'pushups']) expect(CORE_POOL).not.toContain(id)
+  })
+})

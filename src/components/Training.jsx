@@ -6,6 +6,8 @@ import { exerciseHistory, personalRecord, formatSets, metricUnit } from '../util
 import { td, fd } from '../utils/helpers'
 import { ExerciseImages, ExerciseSteps } from './ExerciseVisual'
 import Chart from './Chart'
+import ShareSummary from './ShareSummary'
+import { buildSummary } from '../utils/workoutSummary'
 import TabBar from './TabBar'
 
 const fmt = n => String(Math.round(n * 10) / 10).replace(".", ",")
@@ -75,6 +77,11 @@ function SessionDetail({ session, training, onBack }) {
         })}
         {!exIds.length && <div style={{ color: TM, fontSize: 14 }}>Ingen sett logget.</div>}
       </div>
+      {exIds.length > 0 && <>
+        <div style={stt}>Del økta</div>
+        <ShareSummary summary={buildSummary(session, training.sets, training.sessions)} />
+        <div style={{ height: 20 }} />
+      </>}
       {!confirm
         ? <button style={{ ...bgg, color: SM }} onClick={() => setConfirm(true)}>Slett økta</button>
         : <button style={{ ...bgg, color: SM, borderColor: SM }} onClick={async () => { if (await training.deleteSession(session.id)) onBack() }}>Trykk igjen for å slette</button>}

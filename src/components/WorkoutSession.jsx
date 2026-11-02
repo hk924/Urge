@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { P, PL, AC, SM, BG2, BD, TX, TM, TL, mn, glass, bp, bgg, ba } from '../constants/theme'
 import { EXERCISE_BY_ID } from '../constants/exercises'
 import { ROUTINES, REST_SECONDS } from '../constants/program'
-import { lastPerformance, suggest, formatSets, isNewRecord, metricOf } from '../utils/progression'
+import { lastPerformance, suggest, formatSets, isNewRecord } from '../utils/progression'
+import { buildSummary } from '../utils/workoutSummary'
+import ShareSummary from './ShareSummary'
 import { ExerciseImages, ExerciseSteps } from './ExerciseVisual'
 import Confetti from './Confetti'
 
@@ -205,43 +207,17 @@ function StrengthStep({ ex, item, session, training, onNext }) {
 
 function Summary({ session, training, onDone }) {
   const [cf, setCf] = useState(true)
-  const plan = session.plan
-  const minutes = Math.max(1, Math.round((Date.now() - new Date(session.started_at)) / 60000))
-  const mine = training.sets.filter(s => s.session_id === session.id)
-  const rows = [...plan.main, ...plan.core].map(m => {
-    const ex = EXERCISE_BY_ID[m.exerciseId]
-    const today = mine.filter(s => s.exercise_id === ex.id).sort((a, b) => a.set_no - b.set_no)
-    const prev = lastPerformance(ex.id, training.sets, training.sessions, session.id)
-    let delta = null
-    if (today.length && prev) {
-      const d = metricOf(ex, today) - metricOf(ex, prev.sets)
-      const repsD = today.reduce((a, s) => a + (s.reps || 0), 0) - prev.sets.reduce((a, s) => a + (s.reps || 0), 0)
-      if (d > 0) delta = `+${fmtKg(d)} ${ex.kind === "weight" ? "kg" : ex.kind === "time" ? "sek" : "reps"}`
-      else if (d === 0 && repsD > 0 && ex.kind !== "time") delta = `+${repsD} reps`
-    }
-    return { ex, today, delta }
-  }).filter(r => r.today.length)
-  const improved = rows.filter(r => r.delta).length
-
+  const summary = useMemo(() => buildSummary(session, training.sets, training.sessions), [session.id, session.finished_at])
   return (
     <div style={{ padding: "48px 20px 32px" }} className="fade-in">
       <Confetti active={cf} onDone={() => setCf(false)} />
       <div style={{ fontSize: 13, fontFamily: mn, color: AC, textTransform: "uppercase", letterSpacing: "0.12em" }}>Økt fullført</div>
       <div style={{ fontSize: 30, fontWeight: 700, margin: "8px 0 4px" }}>Bra jobba!</div>
-      <div style={{ fontSize: 15, color: TM, marginBottom: 20 }}>{minutes} min · {mine.length} sett{improved ? ` · fremgang på ${improved} øvelser` : ""}</div>
-      <div style={glass}>
-        {rows.map((r, i) =>
-          <div key={r.ex.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < rows.length - 1 ? `1px solid rgba(255,255,255,0.05)` : "none" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15 }}>{r.ex.name}</div>
-              <div style={{ fontSize: 12, fontFamily: mn, color: TL }}>{formatSets(r.ex, r.today)}</div>
-            </div>
-            {r.delta && <span style={{ fontSize: 12, fontFamily: mn, color: AC, padding: "4px 8px", borderRadius: 8, backgroundColor: "rgba(74,222,128,0.1)" }}>{r.delta}</span>}
-          </div>
-        )}
-        {!rows.length && <div style={{ color: TM, fontSize: 14 }}>Ingen sett logget denne gangen.</div>}
+      <div style={{ fontSize: 15, color: TM, marginBottom: 20 }}>
+        {summary.minutes} min · {summary.setCount} sett{summary.improved ? ` · fremgang på ${summary.improved} ${summary.improved === 1 ? "øvelse" : "øvelser"}` : ""}
       </div>
-      <button style={{ ...bp, marginTop: 8 }} onClick={onDone}>Ferdig</button>
+      <ShareSummary summary={summary} />
+      <button style={{ ...bgg, marginTop: 16 }} onClick={onDone}>Ferdig</button>
     </div>
   )
 }
