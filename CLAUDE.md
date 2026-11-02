@@ -34,13 +34,18 @@ src/
   lib/withings.js      Client calls to Withings edge functions
   constants/theme.js   Colors, fonts, shared style objects (glass, bp, bsm, bgg, stt, ip, ba)
   constants/data.js    Goals, whys, triggers, milestones, quotes, moods, workout types (WTS), STREAK_LEVELS
+  constants/exercises.js  Generated home-training exercise catalog (images in public/exercises/)
+  constants/program.js Routines A/B, 4-week variant blocks, warm-up/core rotation, buildPlan
+  lib/useTraining.js   Training data hook (workout_sessions, workout_sets) + mutations
+  utils/progression.js Last performance, next-session suggestion, records, history
   utils/helpers.js     Date helpers (td, fd, fds, ago, agl) + gmq (motivational message generator)
   utils/streak.js      calcCurrentStreak, calcBestStreak, calcMoneySaved
   components/          Auth, Onboarding, Home, ResistFlow, SmellFlow, Stats, Log, Body, BodyChart,
-                       Settings, TabBar, Chart, Confetti, FlameIcon, TriggerIcon, ErrToast
+                       Settings, TabBar, Chart, Confetti, FlameIcon, TriggerIcon, ErrToast,
+                       Training (tab), WorkoutSession (guided workout), ExerciseVisual
   components/__tests__ Component tests
 supabase/
-  migrations/          SQL migrations (001_withings.sql)
+  migrations/          SQL migrations (001_withings.sql, 002_training.sql)
   functions/           withings-auth, withings-callback, withings-sync, _shared (cors, withings)
 TESTS.md               User stories / test scenarios (Norwegian)
 ```
@@ -50,7 +55,8 @@ TESTS.md               User stories / test scenarios (Norwegian)
 - `loadData` runs the Supabase queries in parallel; `body_goals` is fetched separately so an RLS problem there can't stall the app.
 - Auth is driven by `onAuthStateChange` (needed for PWA session persistence).
 - Heavier components are lazy-loaded for fast startup.
-- Tabs (`TabBar.jsx`): Hjem, Statistikk, Logg, Kropp. Settings opens as an overlay.
+- Tabs (`TabBar.jsx`): Hjem, Statistikk, Trening, Kropp. Logg opens from a button in Statistikk. Settings opens as an overlay.
+- Training state comes from `useTraining` (called in App). Every set is saved immediately so a workout can be resumed.
 - Dates are stored as local `YYYY-MM-DD` strings (`td()`), not UTC timestamps.
 
 ## Database Schema
@@ -59,7 +65,9 @@ TESTS.md               User stories / test scenarios (Norwegian)
 - **smells**: id, user_id, trigger_text, feeling, what, cost, date, logged_at
 - **checkins**: id, user_id, mood, mood_id, date
 - **weights**: id, user_id, kg, fat, muscle, date, source ('manual' | 'withings'), external_id (unique when set)
-- **workouts**: id, user_id, type, duration, date
+- **workouts**: id, user_id, type, duration, date (legacy cardio log, no UI currently)
+- **workout_sessions**: id, user_id, routine ('A'|'B'), block (0|1), plan (jsonb), date, started_at, finished_at, note
+- **workout_sets**: id, user_id, session_id, exercise_id (catalog id), set_no, reps, weight_kg, seconds, effort ('lett'|'passe'|'tungt')
 - **body_goals**: per-user body targets used by the Kropp tab
 - **withings_tokens**: OAuth tokens, service_role only (no RLS policies)
 
@@ -86,13 +94,22 @@ TESTS.md               User stories / test scenarios (Norwegian)
 8. **Kropp (Body)**: Single scrollable page with range picker, stat cards, metric toggle, weight/body-composition chart, per-goal milestone progress bars, body goals settings
 9. **Withings**: OAuth connection + manual "Synkroniser" (pulls 365 days of weight into `weights`)
 10. **Settings**: Goals, triggers, milestones, cost per smell, profile, Withings connection
+11. **Trening**: Guided ~30 min home workouts (adjustable dumbbells + bodyweight, a flat furniture bench, no pull-up bar yet).
+    - Routines A (bein + skyv) and B (hofte + trekk) alternate. Main exercises fixed per 4-week block, then switch to variant; warm-up and core rotate each session.
+    - Flow: warm-up timers -> main sets with "Sist" / "I dag" suggestion, set logging, 60 s rest -> effort (Lett/Passe/Tungt) -> core -> summary with progress deltas.
+    - Progression: double progression (add reps to repMax, then +inc kg); "Tungt" holds or lowers load.
+    - Progress view per exercise (chart, record, history) and session history.
+
+## Training Context (important)
+The user is rebuilding after open-heart surgery (past the restricted phase). Keep intensity moderate: talk test (should be able to speak during sets), breathe through lifts (no breath holding), small load jumps, no max-effort features. Long-term goals: stronger core and doing pull-ups (add a pull-up progression when they get a doorframe bar). Exercise photos come from free-exercise-db (Unlicense); do not use copyrighted poster illustrations.
 
 ## Known Issues / Current Focus
-- **Streak logic** (`src/utils/streak.js`) needs fixing; see tests in `streak.test.js`.
-- **Workouts have no UI.** `wko` is loaded and `addWorkout` / delete exist in `App.jsx`, but the Kropp redesign removed the workout log. A new workout feature is planned.
+- `Body.test.jsx` (14 tests) is stale: it tests the pre-redesign Kropp tabs and fails. Rewrite against the current Body page.
+- Next for Trening: pull-up progression once a bar is available.
 - Withings automatic sync (webhooks) is not implemented; manual sync only. Plan is in Claude project memory. Not the current priority.
 
 ## Conventions
 - Keep changes small and in the existing style (inline styles, theme constants, Norwegian copy).
+- Work on the `dev` branch (Vercel preview: https://urge-git-dev-hk924s-projects.vercel.app). Merge to `main` (production) only when the user approves. Bump `CACHE_NAME` in `public/sw.js` on each release. Preview and prod share one Supabase project.
 - Add or update Vitest tests for logic changes; keep `TESTS.md` user stories in sync with new features.
 - New tables/columns go in a numbered SQL file in `supabase/migrations/` with RLS on `user_id`.

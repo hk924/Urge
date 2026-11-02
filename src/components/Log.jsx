@@ -108,6 +108,7 @@ export default function Log({ sml, res, triggers, sel, setSel, delResist, delSme
   return (
     <div style={ba} className="fade-in">
       <div style={{ padding: "48px 20px 24px" }}>
+        <button onClick={() => setScreen("stats")} style={{ background: "none", border: "none", color: TM, fontFamily: mn, fontSize: 13, cursor: "pointer", padding: 0, marginBottom: 12 }}>← Statistikk</button>
         <div style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>Logg</div>
         {all.length === 0 ? (
           <div style={{ ...glass, textAlign: "center", padding: "40px 20px" }}>
@@ -160,7 +161,7 @@ export default function Log({ sml, res, triggers, sel, setSel, delResist, delSme
           </>
         )}
       </div>
-      <TabBar screen={sc} setScreen={setScreen} />
+      <TabBar screen="stats" setScreen={setScreen} />
     </div>
   )
 }

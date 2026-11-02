@@ -4,6 +4,7 @@ import { DEF_TRIGGERS, DEF_MILESTONES, DEF_COST, ST } from './constants/data'
 import { ba, mn, TL } from './constants/theme'
 import { td, gmq } from './utils/helpers'
 import { calcCurrentStreak, calcBestStreak } from './utils/streak'
+import { useTraining } from './lib/useTraining'
 
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
@@ -15,6 +16,8 @@ const Stats = lazy(() => import('./components/Stats'))
 const Log = lazy(() => import('./components/Log'))
 const Body = lazy(() => import('./components/Body'))
 const Settings = lazy(() => import('./components/Settings'))
+const Training = lazy(() => import('./components/Training'))
+const WorkoutSession = lazy(() => import('./components/WorkoutSession'))
 
 export default function App() {
   const [user, sU] = useState(null)
@@ -72,6 +75,8 @@ export default function App() {
   const [wthE, sWthE] = useState("")
   const [wthLoaded, sWthLoaded] = useState(false)
   const [bodyGoals, sBodyGoals] = useState(null)
+  const [workoutId, sWorkoutId] = useState(null)
+  const training = useTraining(user, sErr)
 
   const goals = profile?.goals || null
   const cfg = profile?.config || null
@@ -392,6 +397,15 @@ export default function App() {
     )
   }
 
+  // Active workout
+  const workout = workoutId && training.sessions.find(s => s.id === workoutId)
+  if (workout) return (
+    <Suspense fallback={lazyFallback}><WorkoutSession
+      session={workout} training={training}
+      onExit={() => { sWorkoutId(null); sSc("training"); window.scrollTo(0, 0) }}
+    /></Suspense>
+  )
+
   // Resist flow
   if (srf) return (
     <ResistFlow
@@ -431,6 +445,14 @@ export default function App() {
 
   if (sc === "stats") return (
     <Suspense fallback={lazyFallback}><Stats curS={curS} besS={besS} tR={tR} tS={tS} ms={ms} smellCost={smellCost} milestones={milestones} tc={tc} weekData={weekData} sc={sc} setScreen={sSc} /></Suspense>
+  )
+
+  if (sc === "training") return (
+    <Suspense fallback={lazyFallback}><Training
+      training={training} sc={sc} setScreen={sSc}
+      onStart={async (routine, block, plan) => { const s = await training.startSession(routine, block, plan); if (s) { sWorkoutId(s.id); window.scrollTo(0, 0) } }}
+      onResume={s => { sWorkoutId(s.id); window.scrollTo(0, 0) }}
+    /></Suspense>
   )
 
   if (sc === "log") return (

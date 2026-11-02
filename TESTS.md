@@ -153,3 +153,18 @@
 - Som bruker ser en feilmelding (toast), og forventer at den forsvinner automatisk etter noen sekunder.
 - Som bruker navigerer mellom faner (Hjem, Statistikk, Logg, Kropp), og forventer at aktiv fane er markert og at innholdet endres.
 - Som bruker installerer appen som PWA, og forventer at den fungerer som en standalone app med riktig ikon og navn.
+
+## Trening
+
+- Som bruker åpner jeg Trening-fanen, og forventer å se Økt A og Økt B, hvilken som er neste, og planen for økta (ca. 30 min).
+- Som bruker trykker jeg "Start Økt A", og forventer å bli guidet gjennom oppvarming med timer, så hovedøvelser, så kjerne.
+- Som bruker ser jeg en hovedøvelse, og forventer bilde av start/slutt-stilling, instruksjon, hva jeg gjorde sist og forslag til i dag.
+- Som bruker logger jeg et sett, og forventer at det lagres med en gang og at en 60 sek pause starter med påminnelse om å puste rolig.
+- Som bruker fullfører siste sett i en øvelse, og forventer å bli spurt "Hvordan kjentes det?" (Lett/Passe/Tungt).
+- Som bruker som klarte øvre rep-grense i alle sett, forventer jeg at neste økt foreslår mer vekt.
+- Som bruker som svarte "Tungt", forventer jeg at neste økt foreslår samme eller lavere vekt.
+- Som bruker avslutter jeg midt i økta med "Ta pause", og forventer å kunne fortsette der jeg slapp.
+- Som bruker fullfører jeg økta, og forventer en oppsummering med fremgang mot forrige gang.
+- Som bruker trykker jeg på en øvelse under Fremgang, og forventer graf, rekord og historikk.
+- Som bruker trener jeg etter 4 uker, og forventer at hovedøvelsene bytter til varianten (blokk 2).
+- Som bruker trykker jeg "Logg" i Statistikk, og forventer å se loggen med vei tilbake til Statistikk.
