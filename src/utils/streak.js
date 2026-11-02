@@ -1,40 +1,56 @@
-import { td } from './helpers'
+// Streak rules:
+// - A day is "active" if it has at least one resist or check-in AND no smell.
+// - A smell day or an empty day breaks the streak.
+// - Today is pending: if nothing is logged yet today, the streak shows the run
+//   up to yesterday. A smell today resets it to 0.
+// Dates are local "YYYY-MM-DD" strings (see td() in helpers).
 
 function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function parseDate(ds) {
+  const [y, m, d] = ds.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+function daySets(sml, res, chk) {
+  const smellDays = new Set(sml.map(s => s.date))
+  const active = new Set()
+  for (const x of [...res, ...chk]) if (!smellDays.has(x.date)) active.add(x.date)
+  return { smellDays, active }
+}
+
 export function calcCurrentStreak(sml, res, chk) {
-  if (!sml.length && !res.length) return 0
-  const sd = new Set(sml.map(s => s.date))
-  let sk = 0
+  const { smellDays, active } = daySets(sml, res, chk)
   const d = new Date()
-  if (sd.has(td())) return 0
-  for (let i = 0; i < 365; i++) {
-    const ds = fmtDate(d)
-    if (sd.has(ds)) break
-    const hr = res.some(r => r.date === ds)
-    const hc = chk.some(c => c.date === ds)
-    if (i === 0 || hr || hc) sk++
-    else { if (!res.some(r => r.date <= ds) && !chk.some(c => c.date <= ds)) break; sk++ }
+  const today = fmtDate(d)
+  if (smellDays.has(today)) return 0
+  // Today pending: don't count it, but don't break on it either
+  if (!active.has(today)) d.setDate(d.getDate() - 1)
+  let sk = 0
+  while (active.has(fmtDate(d))) {
+    sk++
     d.setDate(d.getDate() - 1)
   }
   return sk
 }
 
-export function calcBestStreak(sml, res, chk, curS) {
-  if (!sml.length) return curS
-  const ad = [...res.map(r => r.date), ...chk.map(c => c.date), ...sml.map(s => s.date)].sort()
-  if (!ad.length) return 0
-  const sd = new Set(sml.map(s => s.date))
-  let b = 0, c = 0
-  const d = new Date(ad[0]), e = new Date()
-  while (d <= e) {
-    const ds = fmtDate(d)
-    if (sd.has(ds)) { b = Math.max(b, c); c = 0 } else c++
-    d.setDate(d.getDate() + 1)
+export function calcBestStreak(sml, res, chk, curS = 0) {
+  const { active } = daySets(sml, res, chk)
+  if (!active.size) return curS
+  const days = [...active].sort()
+  let best = 0, run = 0, prev = null
+  for (const ds of days) {
+    if (prev) {
+      const next = parseDate(prev)
+      next.setDate(next.getDate() + 1)
+      run = fmtDate(next) === ds ? run + 1 : 1
+    } else run = 1
+    best = Math.max(best, run)
+    prev = ds
   }
-  return Math.max(b, c)
+  return Math.max(best, curS)
 }
 
 export function calcMoneySaved(resistCount, smellCost) {
